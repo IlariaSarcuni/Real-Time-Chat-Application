@@ -1,5 +1,5 @@
 use anyhow::Ok;
-use axum::{extract::{Request, State}, http::StatusCode, middleware::{from_fn, Next}, response::IntoResponse, routing::{get, post}, Extension, Json, Router};
+use axum::{Extension, Json, Router, extract::{Request, State}, http::{HeaderValue, StatusCode, header::{AUTHORIZATION, CONTENT_TYPE}}, middleware::{Next, from_fn}, response::IntoResponse, routing::{get, post}};
 use axum_session::{Key, SessionConfig, SessionLayer, SessionStore};
 use axum_session_auth::{AuthConfig, AuthSession, AuthSessionLayer, Authentication};
 use axum_session_sqlx::SessionSqlitePool;
@@ -8,6 +8,7 @@ use sqlx::{prelude::FromRow, Executor, Pool, Sqlite, SqlitePool};
 use  async_trait::async_trait;
 
 use colored::*;
+use tower_http::cors::{Any, CorsLayer};
 
 #[tokio::main]
 async fn main() {
@@ -83,6 +84,10 @@ async fn session(pool: Pool<Sqlite>) -> SessionStore<SessionSqlitePool> {
 
 fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>) -> Router {
   let config = AuthConfig::<i64>::default().with_anonymous_user_id(Some(1));
+  let cors_layer=CorsLayer::new().allow_methods(Any).allow_headers
+  ([CONTENT_TYPE,AUTHORIZATION]).allow_origin("http://localhost:4000"
+  .parse::<HeaderValue>().unwrap());
+  
   Router::new()
     .route("/", get(|| async {"Hello world!"}))
     .route("/register", post(register))
@@ -91,9 +96,9 @@ fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>) -> R
     .route("/protected", get(protected).route_layer(from_fn(auth)))
     .layer(AuthSessionLayer::<User, i64, SessionSqlitePool, SqlitePool>::new(Some(pool.clone())).with_config(config))
     .layer(SessionLayer::new(session_store))
+    .layer(cors_layer)
     .with_state(pool)
 }
-
 async fn register(State(pool): State<Pool<Sqlite>>, Json(user): Json<UserRequest>) -> impl IntoResponse {
   let rows : Vec<UserSql> = sqlx::query_as("SELECT * FROM user WHERE username = ?1").bind(&user.username).fetch_all(&pool).await.unwrap();
 
