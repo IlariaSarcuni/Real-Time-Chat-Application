@@ -3,12 +3,21 @@ use axum::{Extension, Json, Router, extract::{Request, State}, http::{HeaderValu
 use axum_session::{Key, SessionConfig, SessionLayer, SessionStore};
 use axum_session_auth::{AuthConfig, AuthSession, AuthSessionLayer, Authentication};
 use axum_session_sqlx::SessionSqlitePool;
-use serde::Deserialize;
+use serde::{Deserialize,Serialize};
+use serde_json::{Value, json};
 use sqlx::{prelude::FromRow, Executor, Pool, Sqlite, SqlitePool};
 use  async_trait::async_trait;
 
 use colored::*;
 use tower_http::cors::{Any, CorsLayer};
+
+//TODO: metterle in un file separato
+//Struct 
+#[derive(Serialize, sqlx::FromRow)]
+struct Team {
+    id: i64,
+    name: String,
+}
 
 #[tokio::main]
 async fn main() {
@@ -93,6 +102,8 @@ fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>) -> R
     .route("/register", post(register))
     .route("/login", post(login))
     .route("/logout", get(log_out))
+    .route("/teams",get(get_teams).route_layer(from_fn(auth)))
+    .route("/create",post(create_team).route_layer(from_fn(auth)))
     .route("/protected", get(protected).route_layer(from_fn(auth)))
     .layer(AuthSessionLayer::<User, i64, SessionSqlitePool, SqlitePool>::new(Some(pool.clone())).with_config(config))
     .layer(SessionLayer::new(session_store))
@@ -133,6 +144,75 @@ async fn log_out(auth: AuthSession<User, i64, SessionSqlitePool, SqlitePool>) ->
   auth.logout_user();
   (StatusCode::OK, "Log out successful!").into_response()
 }
+//TODO: da testare
+async fn get_teams(Extension(user): Extension<User>,State(pool): State<SqlitePool>) -> impl IntoResponse {
+
+  let rows: Vec<Team> = sqlx::query_as(
+        r#"
+        SELECT t.id, t.name
+        FROM team t
+        INNER JOIN user_team ut ON ut.id_team = t.id
+        WHERE ut.id_user = ?1
+        "#
+    )
+    .bind(user.id)
+    .fetch_all(&pool)
+    .await.unwrap();
+
+    let teams = serde_json::to_string_pretty(&rows).unwrap();
+
+    (StatusCode::OK, teams)
+}
+//TODO: Il modo in cui si controllano gli errori senza match e si ritorna mi fa schifo (dava errore), da ricontrollare
+//TODO: Bisogna controllare se il team esiste già
+
+pub async fn create_team(
+    Extension(user): Extension<User>,    // utente autenticato (grazie al middleware `auth`)
+    State(pool): State<SqlitePool>,      // pool DB dallo stato globale
+    Json(body): Json<Value>     // JSON body: { "name": "..." }
+) -> impl IntoResponse {
+    let name =  body.get("name").and_then(|v| v.as_str());
+
+    // Inserimento team
+    let insert_res = sqlx::query(
+        "INSERT INTO team (name) VALUES (?1)"
+    )
+    .bind(name)
+    .execute(&pool)
+    .await;
+  
+    if let Err(e) = insert_res {
+        let err = json!({ "error": format!("Failed to create team: {}", e), "ok": false });
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(err));
+    }
+    let team_id=insert_res.unwrap().last_insert_rowid();
+    
+
+    // Inserimento relazione user-team
+    let link_res = sqlx::query(
+        "INSERT INTO user_team (id_user, id_team) VALUES (?1, ?2)",
+    )
+    .bind(user.id).bind(team_id)
+    .execute(&pool)
+    .await;
+
+    if let Err(e) = link_res {
+        let err = json!({ "error": format!("Failed to link user to team: {}", e), "ok": false });
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(err));
+    }
+
+    // ritornp
+    let ok = json!({
+        "ok": true,
+        "team": {
+            "id": team_id,
+            "name": name
+        }
+    });
+
+    (StatusCode::CREATED, Json(ok))
+}
+
 
 async fn protected(Extension(user): Extension<User>) -> impl IntoResponse {
   let msg = format!("Hello , {} , your id is {}", user.username, user.id);
