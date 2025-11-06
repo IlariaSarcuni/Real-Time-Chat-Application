@@ -1,5 +1,4 @@
-use anyhow::Ok;
-use axum::{Extension, Json, Router, extract::{Request, State}, http::{HeaderValue, StatusCode, header::{AUTHORIZATION, CONTENT_TYPE}}, middleware::{Next, from_fn}, response::IntoResponse, routing::{get, post}};
+use axum::{Extension, Json, Router, extract::{Request, State}, http::{HeaderValue, StatusCode, header::{AUTHORIZATION, CONTENT_TYPE}}, middleware::{Next, ResponseAxumBody, from_fn}, response::IntoResponse, routing::{get, post}};
 use axum_session::{Key, SessionConfig, SessionLayer, SessionStore};
 use axum_session_auth::{AuthConfig, AuthSession, AuthSessionLayer, Authentication};
 use axum_session_sqlx::SessionSqlitePool;
@@ -66,6 +65,15 @@ async fn db() -> Pool<Sqlite> {
         id_team INTEGER NOT NULL
     )
   ").await.unwrap();
+
+        //Inviti da accettare
+  pool.execute("
+    CREATE TABLE IF NOT EXISTS invite(
+        id_user INTEGER NOT NULL,
+        id_team INTEGER NOT NULL
+    )
+  ").await.unwrap();
+
         //messaggi utente
   pool.execute("
     CREATE TABLE IF NOT EXISTS message(
@@ -104,6 +112,7 @@ fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>) -> R
     .route("/logout", get(log_out))
     .route("/teams",get(get_teams).route_layer(from_fn(auth)))
     .route("/create",post(create_team).route_layer(from_fn(auth)))
+    .route("/invite",post(invite).route_layer(from_fn(auth)))
     .route("/protected", get(protected).route_layer(from_fn(auth)))
     .layer(AuthSessionLayer::<User, i64, SessionSqlitePool, SqlitePool>::new(Some(pool.clone())).with_config(config))
     .layer(SessionLayer::new(session_store))
@@ -144,6 +153,7 @@ async fn log_out(auth: AuthSession<User, i64, SessionSqlitePool, SqlitePool>) ->
   auth.logout_user();
   (StatusCode::OK, "Log out successful!").into_response()
 }
+
 //TODO: da testare
 async fn get_teams(Extension(user): Extension<User>,State(pool): State<SqlitePool>) -> impl IntoResponse {
 
@@ -167,9 +177,9 @@ async fn get_teams(Extension(user): Extension<User>,State(pool): State<SqlitePoo
 //TODO: Bisogna controllare se il team esiste già
 
 pub async fn create_team(
-    Extension(user): Extension<User>,    // utente autenticato (grazie al middleware `auth`)
-    State(pool): State<SqlitePool>,      // pool DB dallo stato globale
-    Json(body): Json<Value>     // JSON body: { "name": "..." }
+    Extension(user): Extension<User>,    
+    State(pool): State<SqlitePool>,     
+    Json(body): Json<Value>     
 ) -> impl IntoResponse {
     let name =  body.get("name").and_then(|v| v.as_str());
 
@@ -212,6 +222,54 @@ pub async fn create_team(
 
     (StatusCode::CREATED, Json(ok))
 }
+
+//TODO: Fare ulteriori controlli
+async fn invite(
+    Extension(user): Extension<User>,    
+    State(pool): State<SqlitePool>,     
+    Json(body): Json<Value>  
+) -> impl IntoResponse {
+    // Expect JSON to provide a numeric user_id and a teamname string.
+    let username: &str = body.get("username").and_then(|v| v.as_str()).unwrap_or("");
+    let teamname = body.get("teamname").and_then(|v| v.as_str()).unwrap_or("");
+
+    if username.is_empty() || teamname.is_empty() {
+        return (StatusCode::BAD_REQUEST, "Invalid payload").into_response();
+    }
+    //trova id dell'utente da invitare 
+    let user_id: i64 = match sqlx::query_scalar("SELECT id FROM user WHERE username = ?1")
+        .bind(username)
+        .fetch_one(&pool)
+        .await
+    {
+        Ok(id) => id,
+        Err(_) => return (StatusCode::NOT_FOUND, "User not found").into_response(),
+    };
+    // Trova l'id del gruppo
+    let team_id: i64 = match sqlx::query_scalar("SELECT id FROM team WHERE name = ?1")
+        .bind(teamname)
+        .fetch_one(&pool)
+        .await
+    {
+        Ok(id) => id,
+        Err(_) => return (StatusCode::NOT_FOUND, "Team not found").into_response(),
+    };
+
+    // Inserimento invito
+    let result = sqlx::query(
+        "INSERT INTO invite (id_user, id_team) VALUES (?1, ?2)",
+    )
+    .bind(user_id).bind(team_id)
+    .execute(&pool)
+    .await; 
+
+   //Controllo result
+   match result {
+       Ok(_) => (StatusCode::OK, "inserito").into_response(),
+       Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Errore").into_response(),
+   }
+}
+
 
 
 async fn protected(Extension(user): Extension<User>) -> impl IntoResponse {
