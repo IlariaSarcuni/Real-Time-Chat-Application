@@ -80,9 +80,9 @@ async fn db() -> Pool<Sqlite> {
         id_message INTEGER PRIMARY KEY AUTOINCREMENT,
         id_user INTEGER NOT NULL,
         id_team INTEGER NOT NULL,
-        message TEXT NOT NULL,
-        data DATE NOT NULL,
-        ora TIME NOT NULL
+        message TEXT ,
+        data DATE ,
+        ora TIME 
     )
   ").await.unwrap();
 
@@ -99,6 +99,8 @@ async fn session(pool: Pool<Sqlite>) -> SessionStore<SessionSqlitePool> {
   session_store
 }
 
+//        ROUTES ENDPOINT
+
 fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>) -> Router {
   let config = AuthConfig::<i64>::default().with_anonymous_user_id(Some(1));
   let cors_layer=CorsLayer::new().allow_methods(Any).allow_headers
@@ -113,6 +115,8 @@ fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>) -> R
     .route("/teams",get(get_teams).route_layer(from_fn(auth)))
     .route("/create",post(create_team).route_layer(from_fn(auth)))
     .route("/invite",post(invite).route_layer(from_fn(auth)))
+    .route("/accept",post(accept).route_layer(from_fn(auth)))
+    .route("/send",post(send_message).route_layer(from_fn(auth)))
     .route("/protected", get(protected).route_layer(from_fn(auth)))
     .layer(AuthSessionLayer::<User, i64, SessionSqlitePool, SqlitePool>::new(Some(pool.clone())).with_config(config))
     .layer(SessionLayer::new(session_store))
@@ -223,6 +227,86 @@ pub async fn create_team(
     (StatusCode::CREATED, Json(ok))
 }
 
+
+async fn send_message(
+    Extension(user): Extension<User>,    
+    State(pool): State<SqlitePool>,     
+    Json(body): Json<Value>  
+) -> impl IntoResponse{
+
+  let user_id=user.id;
+  let teamname = body.get("teamname").and_then(|v| v.as_str()).unwrap_or("");
+  let msg = body.get("message").and_then(|v| v.as_str()).unwrap_or("");
+
+  //TODO: fare eventuali controlli ( se user  presente nel team)
+  //Trovo l'id del team
+    let team_id:i64 = match sqlx::query_scalar("SELECT id FROM team WHERE name = ?1")
+    .bind(teamname)
+    .fetch_one(&pool)
+    .await
+    {
+      Ok(id)=>id,
+      Err(_) => return (StatusCode::NOT_FOUND, "Team not found").into_response(),
+    };
+
+  // Manda il messaggio
+   let result = sqlx::query(
+        "INSERT INTO message (id_user,id_team,message,data,ora) VALUES (?1,?2,?3,?4,?5)")
+    .bind(user_id).bind(team_id).bind(msg)
+    .execute(&pool)
+    .await; 
+
+     //Controllo result
+   match result {
+       Ok(_) => (StatusCode::OK, "Messaggio inviato con successo").into_response(),
+       Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+   }
+
+}
+
+//TODO : più query allora bisogna farlo con la transazione
+async fn accept(
+    Extension(user): Extension<User>,    
+    State(pool): State<SqlitePool>,     
+    Json(body): Json<Value>  
+) -> impl IntoResponse{
+
+    let user_id = user.id;
+    let teamname = body.get("teamname").and_then(|v| v.as_str()).unwrap_or("");
+    //Trovo l'id del team
+    let team_id:i64 = match sqlx::query_scalar("SELECT id FROM team WHERE name = ?1")
+    .bind(teamname)
+    .fetch_one(&pool)
+    .await
+    {
+      Ok(id)=>id,
+      Err(_) => return (StatusCode::NOT_FOUND, "Team not found").into_response(),
+    };
+
+    // Inserimento in associazione
+    let res1 = sqlx::query(
+        "INSERT INTO user_team (id_user, id_team) VALUES (?1, ?2)",
+    )
+    .bind(user_id).bind(team_id)
+    .execute(&pool)
+    .await; 
+
+    // Remove da inviti
+    let result = sqlx::query(
+        "DELETE FROM invite WHERE id_user = ?1 AND id_team = ?2",
+    )
+    .bind(user_id).bind(team_id)
+    .execute(&pool)
+    .await; 
+
+    //Controllo result
+   match result {
+       Ok(_) => (StatusCode::OK, "Invito accettato con successo").into_response(),
+       Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Errore").into_response(),
+   }
+
+}
+
 //TODO: Fare ulteriori controlli
 async fn invite(
     Extension(user): Extension<User>,    
@@ -232,6 +316,8 @@ async fn invite(
     // Expect JSON to provide a numeric user_id and a teamname string.
     let username: &str = body.get("username").and_then(|v| v.as_str()).unwrap_or("");
     let teamname = body.get("teamname").and_then(|v| v.as_str()).unwrap_or("");
+
+    //TODO: Controllo se presente nella lista
 
     if username.is_empty() || teamname.is_empty() {
         return (StatusCode::BAD_REQUEST, "Invalid payload").into_response();
