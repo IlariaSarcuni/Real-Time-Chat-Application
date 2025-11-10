@@ -1,0 +1,49 @@
+/* *** AuthComponents.css *** */
+
+/* *** Light and Dark Mode *** */
+.card-title {
+    padding: 1rem 1rem 0 1rem;  /* <top> <right> <bottom> <left> */
+}
+
+.card-title p {
+    font-size: 1rem;
+    font-weight: 400;
+}
+
+/* *** line separator *** */
+div.line-separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+div.line-separator::before, 
+div.line-separator::after {
+    content: "";
+    flex: 1;
+    border-top: 1px solid #cbd2d6;
+    margin: 10px;
+}
+
+/* *** login and registration button *** */
+.login-button, .registration-button {
+    width: 100%;
+}
+
+.login-card {
+    box-shadow: 5px 1px 10px rgba(0, 0, 0, 0.2)
+}
+
+/* *** Light Mode (only) *** */
+.light .mandatory  {
+    color: #ff0000;
+}
+
+/* *** Dark Mode (only) *** */
+.dark .login-card {
+    background-color: #353B45;
+    color: #ffffff;
+}

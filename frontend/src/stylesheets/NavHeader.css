@@ -1,0 +1,24 @@
+/* *** NavHeader.css *** */
+
+/* *** Light and Dark Mode *** */
+nav {
+    background-color: #1C1C2B;
+    border-bottom: 1px solid #002F5F;
+    box-shadow: 0px 1px 10px rgba(0, 0, 0, 0.2);
+}
+
+nav a {
+    text-decoration: none;
+    color: white;
+}
+
+nav button i {
+    color: white;
+    font-size: 1.2rem
+}
+
+.user-username {
+    color: #FFFFFF;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
