@@ -51,8 +51,8 @@ function LoginForm(props) {
                             <Form onSubmit={handleSubmit}>
                                 <Alert dismissible show={show} onClose={() => setShow(false)} variant="danger">{errorMessage}</Alert>
                                 <Form.Group className="mb-3" controlId="formBasicEmail">    {/* instead of id and for. Web accessibility */}
-                                    <Form.Label className="fw-semibold">Email<span className="mandatory">*</span></Form.Label>
-                                    <Form.Control type="email" placeholder="Inserisci la tua email" value={username}
+                                    <Form.Label className="fw-semibold">Username<span className="mandatory">*</span></Form.Label>
+                                    <Form.Control type="text" placeholder="Inserisci il tuo username" value={username}
                                         onChange={event => setUsername(event.target.value)} required={true} />
                                 </Form.Group>
                                 <Form.Group className="mb-3" controlId="formBasicPassword">

@@ -1,4 +1,4 @@
-const SERVER_URL = 'http://localhost:3000/api';
+const SERVER_URL = 'http://localhost:3000';
 
 /* This function executes the login. It wants username and password in a 'credentials' object */
 const logIn = async (credentials) => {
