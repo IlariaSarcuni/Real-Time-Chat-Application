@@ -114,7 +114,8 @@ fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>) -> R
     .route("/register", post(register))
     .route("/login", post(login))
     .route("/logout", get(log_out))
-    .route("/teams",get(get_teams).route_layer(from_fn(auth)))
+    .route("/list/teams",get(get_teams).route_layer(from_fn(auth)))
+    .route("/list/invites",get(get_list_invites).route_layer(from_fn(auth)))
     .route("/create",post(create_team).route_layer(from_fn(auth)))
     .route("/invite",post(invite).route_layer(from_fn(auth)))
     .route("/accept",post(accept).route_layer(from_fn(auth)))
@@ -160,6 +161,24 @@ async fn log_out(auth: AuthSession<User, i64, SessionSqlitePool, SqlitePool>) ->
   (StatusCode::OK, "Log out successful!").into_response()
 }
 
+async fn get_list_invites(Extension(user): Extension<User>,State(pool): State<SqlitePool>) -> impl IntoResponse {
+  
+  let rows: Vec<Team> = sqlx::query_as(
+        r#"
+        SELECT t.id, t.name
+        FROM team t
+        INNER JOIN invite i ON i.id_team = t.id
+        WHERE i.id_user = ?1
+        "#
+    )
+    .bind(user.id)
+    .fetch_all(&pool)
+    .await.unwrap();
+
+    let teams = serde_json::to_string_pretty(&rows).unwrap();
+
+    (StatusCode::OK, teams)
+}
 //TODO: da testare
 async fn get_teams(Extension(user): Extension<User>,State(pool): State<SqlitePool>) -> impl IntoResponse {
 
@@ -240,7 +259,7 @@ async fn send_message(
   let teamname = body.get("teamname").and_then(|v| v.as_str()).unwrap_or("");
   let msg = body.get("message").and_then(|v| v.as_str()).unwrap_or("");
 
-  //TODO: fare eventuali controlli ( se user  presente nel team)
+  //TODO: fare eventuali controlli
   //Trovo l'id del team
     let team_id:i64 = match sqlx::query_scalar("SELECT id FROM team WHERE name = ?1")
     .bind(teamname)
@@ -249,6 +268,21 @@ async fn send_message(
     {
       Ok(id)=>id,
       Err(_) => return (StatusCode::NOT_FOUND, "Team not found").into_response(),
+    };
+    //Controllo se l'utente è presente nel team
+    let userin:i64 = match sqlx::query_scalar::<_,i64>("SELECT id_user FROM user_team WHERE id_user = ?1 AND id_team=?2")
+    .bind(user_id).bind(team_id)
+    .fetch_one(&pool)
+    .await
+    {
+      Ok(id)=>id,
+      Err(sqlx::Error::RowNotFound) => {
+        return (StatusCode::UNAUTHORIZED, "User not in team").into_response();
+    }
+      Err(e) => {
+        eprintln!("Database error: {:?}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
+      }
     };
 
   // Manda il messaggio
