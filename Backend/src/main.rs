@@ -1,4 +1,4 @@
-use axum::{Extension, Json, Router, extract::{Request, State}, http::{HeaderValue, StatusCode, header::{AUTHORIZATION, CONTENT_TYPE}}, middleware::{Next, ResponseAxumBody, from_fn}, response::IntoResponse, routing::{get, post}};
+use axum::{Extension, Json, Router, extract::{Request, State}, http::{HeaderValue, Method, StatusCode, header::{AUTHORIZATION, CONTENT_TYPE}}, middleware::{Next, ResponseAxumBody, from_fn}, response::IntoResponse, routing::{get, post}};
 use axum_session::{Key, SessionConfig, SessionLayer, SessionStore};
 use axum_session_auth::{AuthConfig, AuthSession, AuthSessionLayer, Authentication};
 use axum_session_sqlx::SessionSqlitePool;
@@ -103,9 +103,11 @@ async fn session(pool: Pool<Sqlite>) -> SessionStore<SessionSqlitePool> {
 
 fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>) -> Router {
   let config = AuthConfig::<i64>::default().with_anonymous_user_id(Some(1));
-  let cors_layer=CorsLayer::new().allow_methods(Any).allow_headers
-  ([CONTENT_TYPE,AUTHORIZATION]).allow_origin("http://localhost:4000"
+  let cors_layer=CorsLayer::new().allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+  .allow_credentials(true)
+  .allow_headers([CONTENT_TYPE,AUTHORIZATION]).allow_origin("http://localhost:4000"
   .parse::<HeaderValue>().unwrap());
+  
   
   Router::new()
     .route("/", get(|| async {"Hello world!"}))
