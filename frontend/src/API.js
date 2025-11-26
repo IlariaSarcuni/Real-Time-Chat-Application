@@ -11,8 +11,10 @@ const logIn = async (credentials) => {
             credentials: 'include', // this parameter specifies that authentication cookie must be forwared. It is included in all the authenticated APIs.
             body: JSON.stringify(credentials)
         });
-        const validResponse = handleInvalidResponse(response);
-        return await validResponse.json();
+        //const validResponse = handleInvalidResponse(response);
+        var text=await response.text();
+        console.log(text);
+        return response;
     } catch (error) {
         console.error('Login error: ', error);
         throw error;
