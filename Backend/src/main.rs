@@ -149,9 +149,17 @@ async fn login(auth: AuthSession<User, i64, SessionSqlitePool, SqlitePool>, Stat
       let is_valid = bcrypt::verify(user.password, &rows[0].password).unwrap();
       if is_valid {
         auth.login_user(rows[0].id as i64);
-        (StatusCode::OK, "Login successful").into_response()
+        let resp = json!({
+            "success": true,
+            "message": "Login successful!"
+        });
+        (StatusCode::OK, Json(resp)).into_response()
       } else {
-          (StatusCode::UNAUTHORIZED, "Password is incorrect!").into_response()
+        let resp = json!({
+            "success": false,
+            "message": "Login error!"
+        });
+        (StatusCode::UNAUTHORIZED, Json(resp)).into_response()
       }
   }
 }
@@ -452,3 +460,6 @@ struct UserSql {
   username: String,
   password: String
 }
+
+
+//TODO: Ritornare Json e non text , vedi /login

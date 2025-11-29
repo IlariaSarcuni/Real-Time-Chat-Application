@@ -35,7 +35,9 @@ const logIn = async (credentials) => {
             body: JSON.stringify(credentials)
         });
         const validResponse = handleInvalidResponse(response);
-        return await validResponse.json();
+        var j=await response.json();
+        console.log(j);
+        return response;
     } catch (error) {
         console.error('Login error: ', error);
         throw error;
