@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Container, Row, Col, Form, Button, ListGroup, Modal, Badge, Alert } from 'react-bootstrap';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Container, Row, Col, Form, Button, ListGroup, Modal, Alert } from 'react-bootstrap';
 import API from '../API';
 
 function ChatPage() {
     // Dati
     const [teams, setTeams] = useState([]); 
-    const [invites, setInvites] = useState([]); // <--- Stato per gli inviti
+    const [invites, setInvites] = useState([]); 
     const [currentTeam, setCurrentTeam] = useState(null);
     const [messages, setMessages] = useState([]);
     
@@ -20,6 +20,14 @@ function ChatPage() {
     const [newTeamName, setNewTeamName] = useState("");
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [inviteUsername, setInviteUsername] = useState("");
+
+    // Riferimento per l'auto-scroll
+    const messagesEndRef = useRef(null);
+
+    // Funzione per scorrere in fondo alla chat
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
 
     // 1. Caricamento iniziale (Gruppi + Inviti)
     const refreshAllData = useCallback(() => {
@@ -38,7 +46,6 @@ function ChatPage() {
 
     // 2. Polling messaggi (Ogni 2 sec) + Refresh inviti/gruppi (Ogni 5 sec)
     useEffect(() => {
-        // Polling Messaggi (solo se c'è un team selezionato)
         let msgInterval = null;
         if (currentTeam) {
             const fetchMsgs = () => {
@@ -46,11 +53,10 @@ function ChatPage() {
                     .then(msgs => setMessages(msgs))
                     .catch(err => console.error(err));
             };
-            fetchMsgs(); // Chiamata immediata
+            fetchMsgs(); 
             msgInterval = setInterval(fetchMsgs, 2000);
         }
 
-        // Polling background per nuovi inviti o gruppi (ogni 5 secondi)
         const dataInterval = setInterval(() => {
             refreshAllData();
         }, 5000);
@@ -61,6 +67,11 @@ function ChatPage() {
         };
     }, [currentTeam, refreshAllData]);
 
+    // 3. Auto-scroll ogni volta che cambiano i messaggi
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
     // --- HANDLERS ---
 
     const handleSend = async (e) => {
@@ -69,10 +80,11 @@ function ChatPage() {
         try {
             await API.sendMessage(currentTeam.name, newMessage);
             setNewMessage(""); 
-            // Aggiorna subito i messaggi senza aspettare il polling
+            // Aggiorna subito per reattività immediata
             const msgs = await API.getMessages(currentTeam.name);
             setMessages(msgs);
         } catch (err) {
+            console.error(err); // <--- USO 'err' PER EVITARE L'ERRORE ESLINT
             setErrorMsg("Impossibile inviare il messaggio");
             setTimeout(() => setErrorMsg(""), 3000);
         }
@@ -83,7 +95,7 @@ function ChatPage() {
             await API.createTeam(newTeamName);
             setShowCreateModal(false);
             setNewTeamName("");
-            refreshAllData(); // Ricarica liste
+            refreshAllData(); 
         } catch (err) {
             alert("Errore creazione gruppo: " + err.message);
         }
@@ -96,6 +108,7 @@ function ChatPage() {
             setInviteUsername("");
             alert("Invito inviato con successo!");
         } catch (err) {
+            console.error(err); // <--- USO 'err' PER EVITARE L'ERRORE ESLINT
             alert("Errore invio invito: Utente non trovato o errore server.");
         }
     };
@@ -103,26 +116,21 @@ function ChatPage() {
     const handleAcceptInvite = async (teamName) => {
         try {
             await API.acceptInvite(teamName);
-            refreshAllData(); // Ricarica per spostare il team da inviti a lista gruppi
+            refreshAllData(); 
         } catch (err) {
+            console.error(err); // <--- USO 'err' PER EVITARE L'ERRORE ESLINT
             alert("Impossibile accettare l'invito.");
         }
     }
 
     return (
-        <Container fluid className="vh-100 d-flex flex-column p-0">
-            {/* Header semplificato integrato */}
-            <Row className="bg-primary text-white p-3 m-0 shadow-sm align-items-center">
-                <Col>
-                    <h4 className="m-0 fw-bold"><i className="bi bi-chat-square-quote-fill"></i> Ruggine Chat</h4>
-                </Col>
-            </Row>
-
+        <Container fluid className="d-flex flex-column p-0" style={{ height: 'calc(100vh - 60px)' }}>
+            
             <Row className="flex-grow-1 m-0" style={{overflow: 'hidden'}}>
                 {/* SIDEBAR SINISTRA */}
                 <Col md={3} lg={2} className="border-end bg-light d-flex flex-column h-100 p-0">
                     
-                    {/* Sezione Inviti (Visibile solo se ce ne sono) */}
+                    {/* Sezione Inviti */}
                     {invites.length > 0 && (
                         <div className="p-3 bg-warning bg-opacity-25 border-bottom">
                             <small className="text-uppercase fw-bold text-muted" style={{fontSize:'0.7rem'}}>Inviti in attesa</small>
@@ -147,21 +155,23 @@ function ChatPage() {
                         </Button>
                     </div>
                     
-                    <ListGroup variant="flush" className="flex-grow-1 overflow-auto">
-                        {teams.map(team => (
-                            <ListGroup.Item 
-                                key={team.id} 
-                                action 
-                                active={currentTeam && currentTeam.id === team.id}
-                                onClick={() => setCurrentTeam(team)}
-                                className="border-0 py-3"
-                            >
-                                <i className="bi bi-hash me-2 opacity-50"></i>
-                                {team.name}
-                            </ListGroup.Item>
-                        ))}
-                        {teams.length === 0 && <div className="text-center text-muted mt-4 small">Nessun gruppo attivo</div>}
-                    </ListGroup>
+                    <div className="flex-grow-1 overflow-auto">
+                        <ListGroup variant="flush">
+                            {teams.map(team => (
+                                <ListGroup.Item 
+                                    key={team.id} 
+                                    action 
+                                    active={currentTeam && currentTeam.id === team.id}
+                                    onClick={() => setCurrentTeam(team)}
+                                    className="border-0 py-3"
+                                >
+                                    <i className="bi bi-hash me-2 opacity-50"></i>
+                                    {team.name}
+                                </ListGroup.Item>
+                            ))}
+                            {teams.length === 0 && <div className="text-center text-muted mt-4 small">Nessun gruppo attivo</div>}
+                        </ListGroup>
+                    </div>
                 </Col>
 
                 {/* AREA CHAT CENTRALE */}
@@ -184,7 +194,7 @@ function ChatPage() {
                                 </Button>
                             </div>
 
-                            {/* Lista Messaggi */}
+                            {/* Lista Messaggi (Scrollabile) */}
                             <div className="flex-grow-1 p-4" style={{overflowY: 'auto', background: '#f0f2f5'}}>
                                 {messages.length === 0 && (
                                     <div className="text-center text-muted mt-5">
@@ -203,9 +213,11 @@ function ChatPage() {
                                         </div>
                                     </div>
                                 ))}
+                                {/* Div invisibile per l'auto-scroll */}
+                                <div ref={messagesEndRef} />
                             </div>
 
-                            {/* Input Area */}
+                            {/* Input Area (Fissa in basso) */}
                             <div className="p-3 bg-light border-top">
                                 <Form onSubmit={handleSend}>
                                     <Row className="g-2">

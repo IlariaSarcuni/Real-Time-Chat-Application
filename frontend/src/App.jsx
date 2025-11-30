@@ -71,20 +71,14 @@ function App() {
           {/* Se vado su root: se loggato -> chat, se no -> login */}
           <Route index element={ loggedIn ? <Navigate to="/chat" /> : <Navigate to="/login" /> } />
 
-          {/* LOGIN: Renderizza il tuo componente standard. 
-              Lui farà API.login() e poi navigate('/chat'). 
-              Quando arriverà su /chat, lo useEffect sopra scatterà e metterà loggedIn=true */}
           <Route path="/login" element={ loggedIn ? <Navigate to="/chat" /> : <LoginForm /> } />
-          
-          {/* REGISTER */}
+
           <Route path="/register" element={ loggedIn ? <Navigate to="/chat" /> : <RegisterForm /> } />
 
-          {/* CHAT: Rotta Protetta manuale */}
           <Route path="/chat" element={ 
              loggedIn ? <ChatPage /> : <Navigate to="/login" /> 
           } />
 
-          {/* 404 */}
           <Route path="*" element={<NotFoundComponent />} />
 
         </Route>

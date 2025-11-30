@@ -17,7 +17,7 @@ function NavHeader(props) {
                     <Col className="col-2 d-flex align-items-center">
                         <Link to="/" className="navbar-brand">
                             <i className="bi bi-chat-dots"></i>{' '}
-                            <span>RuggineApp</span>
+                            <span>Ruggine Chat </span>
                         </Link>
                     </Col>
                 </Row>
