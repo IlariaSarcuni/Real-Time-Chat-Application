@@ -8,7 +8,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import ThemeContext from './ThemeContext';
 import API from './API';
 
-// Componenti
+// Components
 import NavHeader from "./components/NavHeader";
 import { LoginForm } from './components/AuthComponents';
 import RegisterForm from './components/RegisterForm'; 
@@ -16,7 +16,7 @@ import ChatPage from './components/ChatPage';
 import NotFoundComponent from './components/NotFoundComponent';
 
 function App() {
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState('dark');
   
   // Stato di login (verificato tramite chiamata API)
   const [loggedIn, setLoggedIn] = useState(false);
@@ -25,6 +25,10 @@ function App() {
   // Controlliamo la sessione ogni volta che cambia la Location (cioè cambiamo pagina)
   // o almeno all'avvio.
   const location = useLocation();
+
+  const toggleTheme = () => {
+    setTheme(currTheme => currTheme === "light" ? "dark" : "light");
+  }
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -61,7 +65,7 @@ function App() {
         <Route path="/" element={
           <>
             {/* Passiamo loggedIn e logout a NavHeader se vuoi mostrare il bottone */}
-            <NavHeader loggedIn={loggedIn} logout={handleLogout} />
+            <NavHeader toggleTheme={toggleTheme} loggedIn={loggedIn} logout={handleLogout} />
             <Container fluid className="p-0">
               <Outlet />
             </Container>

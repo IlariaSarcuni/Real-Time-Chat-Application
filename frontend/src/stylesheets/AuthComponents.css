@@ -1,16 +1,25 @@
 /* *** AuthComponents.css *** */
 
-/* *** Light and Dark Mode *** */
+/* *** Layout *** */
+.light {
+    background-color: #F7F7F7;
+}
+
+.dark {
+    background-color: #1A1A1A;
+}
+
 .card-title {
-    padding: 1rem 1rem 0 1rem;  /* <top> <right> <bottom> <left> */
+    padding: 1.5rem 2rem 0.5rem 2rem;  /* <top> <right> <bottom> <left> */
 }
 
-.card-title p {
-    font-size: 1rem;
-    font-weight: 400;
+.card-title h3 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    letter-spacing: 1px;
 }
 
-/* *** line separator *** */
+/* *** Line separator *** */
 div.line-separator {
     display: flex;
     align-items: center;
@@ -24,17 +33,71 @@ div.line-separator::before,
 div.line-separator::after {
     content: "";
     flex: 1;
-    border-top: 1px solid #cbd2d6;
+    border-top: 1px solid #D0D0D0;
     margin: 10px;
 }
 
-/* *** login and registration button *** */
+/* *** Login and registration button *** */
 .login-button, .registration-button {
     width: 100%;
+    font-weight: 600;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease-in-out;
 }
 
-.login-card {
-    box-shadow: 5px 1px 10px rgba(0, 0, 0, 0.2)
+.login-button {
+    border: none;
+    color: #FFFFFF;
+    background-color: #B7410E;
+}
+
+.login-button:hover:not(:disabled) {
+    background-color: #B7410E;
+    box-shadow: 0 4px 10px rgba(183, 65, 14, 0.4);
+    transform: translateY(-1px);
+}
+
+.login-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+.registration-button {
+    background-color: transparent !important;
+    border: 1px solid #B7410E !important;
+    color: #B7410E !important;
+}
+
+.registration-button:hover {
+    background-color: rgba(183, 65, 14, 0.1) !important;
+    color: #8C320A !important;
+    border-color: #8C320A !important;
+}
+
+/* *** Login and Registration Card *** */
+.auth-card {
+    box-shadow: none;
+    border: 1px solid #E0E0E0;
+    border-radius: 4px;
+    padding: 0;
+}
+
+.card-body {
+    padding: 1rem 2rem 2rem 2rem !important;
+}
+
+.form-control {
+    border-radius: 4px;
+    border: 1px solid #C4C4C4;
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(183, 65, 14, 0.25);
+    border-color: #B7410E;
 }
 
 /* *** Light Mode (only) *** */
@@ -43,7 +106,45 @@ div.line-separator::after {
 }
 
 /* *** Dark Mode (only) *** */
-.dark .login-card {
-    background-color: #353B45;
-    color: #ffffff;
+.dark .auth-card {
+    background-color: #252525;
+    border: 1px solid #444444;
+    color: #E0E0E0;
+}
+
+.dark .form-control {
+    background-color: #353535;
+    border-color: #444444;
+    color: #E0E0E0;
+}
+
+.dark .form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(214, 79, 16, 0.35);
+}
+
+.dark div.line-separator::before, 
+.dark div.line-separator::after {
+    border-top: 1px solid #444444;
+}
+
+.dark .mandatory  {
+    color: #FF7777;
+}
+
+.dark .login-button {
+    background-color: #D64F10; 
+}
+
+.dark .registration-button {
+    border: 1px solid #D64F10 !important;
+    color: #D64F10 !important;
+}
+
+.dark .registration-button:hover {
+    background-color: rgba(214, 79, 16, 0.1) !important;
+}
+
+.dark .form-control::placeholder {
+    color: #999999 !important; /* Grigio medio chiaro, ben visibile sul background scuro */
+    opacity: 1; /* Assicurati che non venga applicata una trasparenza */
 }
