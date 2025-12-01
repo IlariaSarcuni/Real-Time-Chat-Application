@@ -1,20 +1,20 @@
 [package]
-name = "Backend"
+name = "backend"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 colored = "2.0"
 
-tokio = { version = "1.42.0", features = ["full"]}
+tokio = { version = "1.42.0", features = ["full", "sync"]}
+axum = { version = "0.8.1", features = ["ws"] }
 
 sqlx = { version="0.8.3", features = [ "sqlite", "runtime-tokio", "tls-native-tls" ] }
 serde = { version = "1.0.215", features = ["derive"] }
 serde_json = "1.0"
 
-axum = { version = "0.8.1"}
 axum_session = "0.16.0"
-axum_session_auth = { version = "0.16.0"   }
+axum_session_auth = { version = "0.16.0" }
 axum_session_sqlx = { version = "0.5.0", features = [ "sqlite", "tls-rustls"] }
 
 bcrypt = "0.16.0"
@@ -22,3 +22,13 @@ async-trait = {version = "0.1.87"  }
 anyhow = "1.0.97"
 
 tower-http = {version = "0.6.2",features=["cors"]}
+
+# Per il logging della CPU
+sysinfo = "0.30.12" 
+
+# Per i timestamp (log e messaggi)
+chrono = { version = "0.4.38", features = ["serde", "clock"] } 
+
+# Per gestire lo stato delle chat room (WebSocket)
+dashmap = "5.5.3" 
+futures-util = { version = "0.3.31", features = ["sink", "std"] }

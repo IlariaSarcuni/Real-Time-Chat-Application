@@ -1,8 +1,10 @@
 use axum::{
   Extension, Json, Router, 
-  extract::{Request, State, Query}, // AGGIUNTO Query
+  extract::{Request, State, Query, // AGGIUNTO Query
+   ws::{Message, WebSocket, WebSocketUpgrade}, //WebSocketUpgrade, Message, WebSocket
+        Path}, //per estrarre :team_id   
   http::{HeaderValue, Method, StatusCode, header::{AUTHORIZATION, CONTENT_TYPE}}, 
-  middleware::{Next, ResponseAxumBody, from_fn}, 
+  middleware::{Next, from_fn}, 
   response::IntoResponse, 
   routing::{get, post}};
 use axum_session::{Key, SessionConfig, SessionLayer, SessionStore};
@@ -15,7 +17,17 @@ use  async_trait::async_trait;
 use std::collections::HashMap; // AGGIUNTO HashMap
 
 use colored::*;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{CorsLayer};
+
+//WEBSOCKETS E LOGGING
+use std::sync::Arc;
+use dashmap::DashMap;
+use tokio::sync::broadcast;
+use futures_util::{sink::SinkExt, stream::StreamExt};
+use chrono::Local;
+use sysinfo::{System};
+use std::io::Write;
+use std::fs::OpenOptions;
 
 //Struct 
 #[derive(Serialize, sqlx::FromRow)]
@@ -24,7 +36,6 @@ struct Team {
     name: String,
 }
 
-// AGGIUNTA QUESTA STRUCT MANCANTE
 #[derive(Serialize, sqlx::FromRow)]
 struct MessageResponse {
     username: String,
@@ -32,17 +43,56 @@ struct MessageResponse {
     ora: String, 
 }
 
+// Key: team_id, Value: Canale di broadcast per quel team
+type ChatRooms = Arc<DashMap<i64, broadcast::Sender<String>>>;
+
 #[tokio::main]
 async fn main() {
   let pool = db().await;
   let session_store = session(pool.clone()).await;
-  let app = app(pool, session_store);
+  
+  //Stato per le chat room
+    let chat_rooms: ChatRooms = Arc::new(DashMap::new());
+
+    //Task per il logging della CPU
+    tokio::spawn(async {
+        cpu_logger_task().await;
+    });
+  
+  let app = app(pool, session_store, chat_rooms);
 
   let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
   print!("{}","Listening on : ".to_string().cyan());
   println!("{}",listener.local_addr().unwrap().to_string().green());
 
   axum::serve(listener, app).await.unwrap()
+}
+
+//Funzione per il logging della CPU
+async fn cpu_logger_task() {
+    let mut sys = System::new_all();
+    let mut log_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("cpu_log.txt")
+        .expect("Impossibile aprire il file di log della CPU");
+
+    println!("{}", "Avvio del logger CPU (ogni 2 minuti)...".yellow());
+
+    loop {
+        // Aspetta 2 minuti
+        tokio::time::sleep(std::time::Duration::from_secs(120)).await;
+        
+        sys.refresh_cpu(); 
+        let cpu_usage = sys.global_cpu_info().cpu_usage();
+        let timestamp = Local::now().to_rfc3339();
+
+        let log_entry = format!("[{}] - Utilizzo CPU globale: {:.2}%\n", timestamp, cpu_usage);
+        
+        if let Err(e) = log_file.write_all(log_entry.as_bytes()) {
+            eprintln!("{} Errore scrittura log CPU: {}", "[ERROR]".red(), e);
+        }
+    }
 }
 
 async fn db() -> Pool<Sqlite> {
@@ -104,14 +154,12 @@ async fn session(pool: Pool<Sqlite>) -> SessionStore<SessionSqlitePool> {
   session_store
 }
 
-//        ROUTES ENDPOINT
-
-fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>) -> Router {
-  let config = AuthConfig::<i64>::default().with_anonymous_user_id(Some(1));
-  let cors_layer=CorsLayer::new().allow_methods([Method::GET, Method::POST, Method::OPTIONS])
-  .allow_credentials(true)
-  .allow_headers([CONTENT_TYPE,AUTHORIZATION]).allow_origin("http://localhost:4000"
-  .parse::<HeaderValue>().unwrap());
+fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>, chat_rooms: ChatRooms) -> Router {
+    let config = AuthConfig::<i64>::default().with_anonymous_user_id(Some(1));
+    let cors_layer=CorsLayer::new().allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_credentials(true)
+        .allow_headers([CONTENT_TYPE,AUTHORIZATION]).allow_origin("http://localhost:4000"
+        .parse::<HeaderValue>().unwrap());
   
   Router::new()
     .route("/", get(|| async {"Hello world!"}))
@@ -126,10 +174,17 @@ fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>) -> R
     .route("/send",post(send_message).route_layer(from_fn(auth)))
     .route("/messages", get(get_messages).route_layer(from_fn(auth))) // AGGIUNTO QUESTA ROTTA
     .route("/protected", get(protected).route_layer(from_fn(auth)))
+    .route("/ws/team/{team_id}", get(websocket_handler).route_layer(from_fn(auth)))
+    
     .layer(AuthSessionLayer::<User, i64, SessionSqlitePool, SqlitePool>::new(Some(pool.clone())).with_config(config))
     .layer(SessionLayer::new(session_store))
     .layer(cors_layer)
-    .with_state(pool)
+
+    //Rende le chat_rooms disponibili agli handler
+    .layer(Extension(chat_rooms))
+
+    .with_state(pool) // Lo state principale rimane la pool
+
 }
 
 async fn register(State(pool): State<Pool<Sqlite>>, Json(user): Json<UserRequest>) -> impl IntoResponse {
@@ -282,7 +337,8 @@ pub async fn create_team(
 
 async fn send_message(
     Extension(user): Extension<User>,    
-    State(pool): State<SqlitePool>,     
+    State(pool): State<SqlitePool>,  
+    Extension(chat_rooms): Extension<ChatRooms>,  
     Json(body): Json<Value>  
 ) -> impl IntoResponse{
 
@@ -314,7 +370,7 @@ async fn send_message(
       }
     };
 
-   // CORRETTO: Uso CURRENT_DATE e CURRENT_TIME invece di ?4 e ?5
+   //Uso CURRENT_DATE e CURRENT_TIME invece di ?4 e ?5
    let result = sqlx::query(
         "INSERT INTO message (id_user,id_team,message,data,ora) VALUES (?1,?2,?3, CURRENT_DATE, CURRENT_TIME)"
     )
@@ -325,12 +381,26 @@ async fn send_message(
     .await; 
 
    match result {
-       Ok(_) => (StatusCode::OK, "Messaggio inviato con successo").into_response(),
-       Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
-   }
+        Ok(_) => {
+            //Broadcast via WebSocket            
+            // Creiamo il payload del messaggio da inviare
+            let msg_payload = json!({
+                "username": user.username,
+                "message": msg,
+                "ora": Local::now().format("%H:%M:%S").to_string()
+            });
+            let msg_string = serde_json::to_string(&msg_payload).unwrap_or_default();
+
+            // Trovo il canale di broadcast per questo team
+            if let Some(tx) = chat_rooms.get(&team_id) {
+                let _ = tx.send(msg_string); 
+            }
+            (StatusCode::OK, "Messaggio inviato con successo").into_response()
+        },
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
 }
 
-// CORRETTO CON TRANSAZIONE
 async fn accept(
     Extension(user): Extension<User>,    
     State(pool): State<SqlitePool>,     
@@ -405,7 +475,8 @@ async fn invite(
     };
 
     let result = sqlx::query("INSERT INTO invite (id_user, id_team) VALUES (?1, ?2)")
-    .bind(user_id).bind(team_id)
+    .bind(user_id)
+    .bind(team_id)
     .execute(&pool)
     .await; 
 
@@ -428,6 +499,94 @@ async fn auth(auth: AuthSession<User, i64, SessionSqlitePool, SqlitePool>, mut r
   } else {
       (StatusCode::UNAUTHORIZED, "Guest, you are unauthorized!").into_response()
   }
+}
+
+//Gestore WebSocket
+async fn websocket_handler(
+    ws: WebSocketUpgrade,
+    Extension(user): Extension<User>,
+    Extension(chat_rooms): Extension<ChatRooms>,
+    State(pool): State<SqlitePool>,
+    Path(team_id): Path<i64>, // Prende l'ID del team dall'URL
+) -> impl IntoResponse {
+    
+    // 1. Verificare che l'utente appartenga al team prima di fare l'upgrade
+    let user_in_team: Result<i64, sqlx::Error> = sqlx::query_scalar(
+        "SELECT id_user FROM user_team WHERE id_user = ?1 AND id_team = ?2"
+    )
+    .bind(user.id)
+    .bind(team_id)
+    .fetch_one(&pool)
+    .await;
+
+    if user_in_team.is_err() {
+        // Se non fa parte del team, rifiuta la connessione
+        return (StatusCode::FORBIDDEN, "Non fai parte di questo team").into_response();
+    }
+
+    // 2. Esegui l'upgrade della connessione
+    println!("{} Utente {} connesso al team {}", "[INFO]".cyan(), user.username, team_id);
+    ws.on_upgrade(move |socket| 
+        handle_socket(socket, user, chat_rooms, team_id)
+    )
+}
+
+async fn handle_socket(
+    socket: WebSocket,
+    user: User,
+    chat_rooms: ChatRooms,
+    team_id: i64,
+) {
+    // 3. Ottieni o crea il canale di broadcast per questo team
+    // Usiamo entry per l'inserimento atomico se non esiste
+    let tx = chat_rooms.entry(team_id)
+        .or_insert_with(|| broadcast::channel(100).0) // Crea un nuovo canale se non esiste
+        .clone(); // Clona il sender
+
+    let mut rx = tx.subscribe(); // Iscriviti al canale
+
+    let (mut sender, mut receiver) = socket.split();
+
+    // Task per inviare messaggi al client (dal broadcast)
+    let mut send_task = tokio::spawn(async move {
+        loop {
+            match rx.recv().await {
+                Ok(msg_string) => {
+                    // Invia il messaggio sul WebSocket
+                    if sender.send(Message::Text(msg_string.into())).await.is_err() {
+                        // Errore: il client si è disconnesso
+                        break;
+                    }
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
+                    // Il ricevitore era troppo lento, ma continuiamo
+                }
+                Err(_) => {
+                    // Il sender è stato chiuso, usciamo
+                    break;
+                }
+            }
+        }
+    });
+
+    // Task per ricevere messaggi dal client
+    // Per ora, li ignoriamo e chiudiamo se il client si disconnette
+    let mut recv_task = tokio::spawn(async move {
+        while let Some(Ok(msg)) = receiver.next().await {
+            if let Message::Close(_) = msg {
+                break;
+            }
+            // Qui potremmo gestire messaggi in arrivo dal client, ad esempio "user is typing"
+        }
+    });
+
+    // Aspetta che uno dei due task finisca (l'altro verrà abort)
+    tokio::select! {
+        _ = &mut send_task => recv_task.abort(),
+        _ = &mut recv_task => send_task.abort(),
+    }
+
+    println!("{} WebSocket disconnesso per l'utente {}", "[INFO]".cyan(), user.username);
 }
 
 #[derive(Deserialize)]
