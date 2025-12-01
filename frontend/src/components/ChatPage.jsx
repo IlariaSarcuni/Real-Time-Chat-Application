@@ -35,7 +35,6 @@ function ChatPage({ user }) {
 
     useEffect(() => {
         if (!currentTeam) return;
-        // Usa ID per scaricare i messaggi
         API.getMessages(currentTeam.id).then(setMessages).catch(console.error);
         
         const ws = new WebSocket(`ws://localhost:3000/ws/team/${currentTeam.id}`);
@@ -146,7 +145,7 @@ function ChatPage({ user }) {
                                 {messages.map((msg, idx) => {
                                     const prevMsg = messages[idx - 1];
                                     const showDate = !prevMsg || msg.data !== prevMsg.data;
-                                    // CONTROLLO FONDAMENTALE: Sono io?
+                                    // Controllo se il messaggio è mio
                                     const isMine = user && msg.username === user.username;
 
                                     return (
@@ -158,7 +157,7 @@ function ChatPage({ user }) {
                                             )}
                                             
                                             {/* CLASSE DINAMICA: isMine ? destra : sinistra */}
-                                            <div className={`mb-2 d-flex flex-column ${isMine ? 'align-items-end' : 'align-items-start'}`}>
+                                            <div className={`mb-2 d-flex flex-column ${isMine ? 'align-items-start' : 'align-items-end'}`}>
                                                 <div className={`p-2 px-3 rounded-3 shadow-sm border ${isMine ? 'bg-success text-white' : 'bg-white text-dark'}`} 
                                                      style={{maxWidth: '75%', minWidth: '120px', position: 'relative'}}>
                                                     

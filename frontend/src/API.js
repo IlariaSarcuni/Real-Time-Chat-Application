@@ -1,28 +1,19 @@
 const SERVER_URL = 'http://localhost:3000';
 
-/**
- * Gestisce le risposte HTTP.
- * Se OK -> restituisce JSON.
- * Se Errore -> cerca il messaggio d'errore nel body.
- */
 async function handleResponse(response) {
     if (!response.ok) {
         try {
             const errPayload = await response.text();
             try {
-                // Proviamo a parsare se è un JSON
                 const errJson = JSON.parse(errPayload);
                 if (errJson.error) throw new Error(errJson.error);
                 if (errJson.message) throw new Error(errJson.message);
             } catch { 
-                // Se non è JSON, usiamo il testo grezzo (senza dichiarare variabili inutilizzate)
                 if (errPayload) throw new Error(errPayload);
             }
         } catch (e) {
-            // Se abbiamo estratto un errore specifico sopra, lo rilanciamo
             if (e.message) throw e;
         }
-        // Fallback generico
         throw new Error(response.statusText || "Errore di connessione");
     }
     
@@ -53,7 +44,7 @@ const logIn = async (credentials) => {
         });
         return await handleResponse(response);
     } catch (error) {
-        console.error('Login error: ', error); // Qui usiamo 'error', quindi niente warning
+        console.error('Login error: ', error); 
         throw error;
     }
 };
