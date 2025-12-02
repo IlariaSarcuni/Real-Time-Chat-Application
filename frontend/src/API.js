@@ -129,10 +129,20 @@ const acceptInvite = async (teamId) => {
     return await handleResponse(response);
 };
 
+const declineInvite = async (teamId) => {
+    const response = await fetch(`${SERVER_URL}/decline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ team_id: teamId })
+    });
+    return await handleResponse(response);
+};
+
 const API = { 
     register, logIn, logOut, getUserInfo,
     getTeams, getMessages, sendMessage, createTeam, leaveTeam,
-    inviteUser, getInvites, acceptInvite
+    inviteUser, getInvites, acceptInvite, declineInvite
 };
 
 export default API;

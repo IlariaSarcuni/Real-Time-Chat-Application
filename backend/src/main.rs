@@ -12,14 +12,13 @@ use axum_session_auth::{AuthConfig, AuthSession, AuthSessionLayer, Authenticatio
 use axum_session_sqlx::SessionSqlitePool;
 use serde::{Deserialize,Serialize};
 use serde_json::{Value, json};
-use sqlx::{prelude::FromRow, Executor, Pool, Sqlite, SqlitePool};
+use sqlx::{prelude::FromRow, Pool, Sqlite, SqlitePool};
 use async_trait::async_trait;
 use std::collections::HashMap;
 
 use colored::*;
 use tower_http::cors::{CorsLayer};
 
-// WEBSOCKETS E LOGGING
 use std::sync::Arc;
 use dashmap::DashMap;
 use tokio::sync::broadcast;
@@ -28,8 +27,6 @@ use chrono::Local;
 use sysinfo::{System};
 use std::io::Write;
 use std::fs::OpenOptions;
-
-// --- STRUCTS ---
 
 #[derive(Serialize, sqlx::FromRow)]
 struct Team {
@@ -42,28 +39,23 @@ struct MessageResponse {
     username: String,
     message: String,
     ora: String, 
-    data: String, // Campo data per i separatori "Oggi/Ieri"
+    data: String, 
 }
 
-// Struttura per inviare le info dell'utente corrente al frontend (per allineamento messaggi)
 #[derive(Serialize)]
 struct UserInfo {
     id: i64,
     username: String,
 }
 
-// Key: team_id, Value: Canale di broadcast per quel team
 type ChatRooms = Arc<DashMap<i64, broadcast::Sender<String>>>;
 
 #[tokio::main]
 async fn main() {
-  let pool = db().await; // Si connette al DB manuale
+  let pool = db().await;
   let session_store = session(pool.clone()).await;
-  
-  // Stato per le chat room
-    let chat_rooms: ChatRooms = Arc::new(DashMap::new());
+  let chat_rooms: ChatRooms = Arc::new(DashMap::new());
 
-    // Task per il logging della CPU
     tokio::spawn(async {
         cpu_logger_task().await;
     });
@@ -77,7 +69,6 @@ async fn main() {
   axum::serve(listener, app).await.unwrap()
 }
 
-// Funzione per il logging della CPU
 async fn cpu_logger_task() {
     let mut sys = System::new_all();
     let mut log_file = OpenOptions::new()
@@ -87,44 +78,25 @@ async fn cpu_logger_task() {
         .expect("Impossibile aprire il file di log della CPU");
 
     println!("{}", "Avvio del logger CPU (ogni 2 minuti)...".yellow());
-
-    // Piccolo ritardo iniziale
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
     loop {
-        // Aspetta 2 minuti
         tokio::time::sleep(std::time::Duration::from_secs(120)).await;
-        
         sys.refresh_cpu(); 
-        let cpu_usage = sys.global_cpu_info().cpu_usage();
-        let timestamp = Local::now().to_rfc3339();
-
-        let log_entry = format!("[{}] - Utilizzo CPU: {:.2}%\n", timestamp, cpu_usage);
-        
-        if let Err(e) = log_file.write_all(log_entry.as_bytes()) {
-            eprintln!("{} Errore scrittura log CPU: {}", "[ERROR]".red(), e);
-        }
+        let log_entry = format!("[{}] - Utilizzo CPU: {:.2}%\n", Local::now().to_rfc3339(), sys.global_cpu_info().cpu_usage());
+        let _ = log_file.write_all(log_entry.as_bytes());
     }
 }
 
-// --- CONFIGURAZIONE DATABASE ---
 async fn db() -> Pool<Sqlite> {
-    println!("{}", "Tentativo di connessione a 'db.sqlite'...".yellow());
-    
-    // Tenta di connettersi. Se il file non c'è, va in panico (esce).
     let pool = sqlx::sqlite::SqlitePool::connect("sqlite://db.sqlite")
         .await
-        .expect("\nERRORE: Impossibile trovare 'il database.\n");
-
-    println!("{}", "Database connesso con successo.".green());
-
+        .expect("\n❌ ERRORE: Impossibile trovare 'db.sqlite'.\nAssicurati di aver creato il database manualmente!\n");
     pool
 }
 
 async fn session(pool: Pool<Sqlite>) -> SessionStore<SessionSqlitePool> {
   let config = SessionConfig::default().with_table_name("session_table").with_key(Key::generate());
-  // Nota: La tabella session_table viene gestita automaticamente dalla libreria, 
-  // ma idealmente dovresti averla creata o la libreria proverà a farlo.
   SessionStore::<SessionSqlitePool>::new(Some(pool.clone().into()), config).await.unwrap()
 }
 
@@ -140,13 +112,14 @@ fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>, chat
     .route("/register", post(register))
     .route("/login", post(login))
     .route("/logout", get(log_out))
-    .route("/me", get(get_me).route_layer(from_fn(auth))) // Info utente
+    .route("/me", get(get_me).route_layer(from_fn(auth))) 
     .route("/list/teams",get(get_teams).route_layer(from_fn(auth)))
     .route("/list/invites",get(get_list_invites).route_layer(from_fn(auth)))
     .route("/create",post(create_team).route_layer(from_fn(auth)))
     .route("/invite",post(invite).route_layer(from_fn(auth)))
     .route("/accept",post(accept).route_layer(from_fn(auth)))
-    .route("/leave", post(leave_team).route_layer(from_fn(auth))) // Abbandona gruppo
+    .route("/decline", post(decline).route_layer(from_fn(auth))) // <--- QUESTA MANCAVA!
+    .route("/leave", post(leave_team).route_layer(from_fn(auth))) 
     .route("/send",post(send_message).route_layer(from_fn(auth)))
     .route("/messages", get(get_messages).route_layer(from_fn(auth))) 
     .route("/protected", get(protected).route_layer(from_fn(auth)))
@@ -159,42 +132,35 @@ fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>, chat
     .with_state(pool) 
 }
 
-// --- HANDLERS ---
+// HANDLERS
 
-// Restituisce ID e Username dell'utente loggato
 async fn get_me(Extension(user): Extension<User>) -> impl IntoResponse {
     (StatusCode::OK, Json(UserInfo { id: user.id, username: user.username }))
 }
 
 async fn register(State(pool): State<Pool<Sqlite>>, Json(user): Json<UserRequest>) -> impl IntoResponse {
-  // Il DB ha il vincolo UNIQUE su username, quindi se fallisce è per quello
+  let rows : Vec<UserSql> = sqlx::query_as("SELECT * FROM user WHERE username = ?1").bind(&user.username).fetch_all(&pool).await.unwrap();
+  if rows.len() != 0 { return (StatusCode::BAD_REQUEST, "Username already taken!").into_response(); } 
+  
   let hash_password = bcrypt::hash(user.password, 10).unwrap();
-  let res = sqlx::query("INSERT INTO user (username, password) VALUES (?1, ?2)")
-      .bind(&user.username)
-      .bind(&hash_password)
-      .execute(&pool)
-      .await;
-
+  let res = sqlx::query("INSERT INTO user (username, password) VALUES (?1, ?2)").bind(&user.username).bind(&hash_password).execute(&pool).await;
+  
   match res {
       Ok(_) => (StatusCode::OK, "Register successful!").into_response(),
-      Err(_) => (StatusCode::BAD_REQUEST, "Username già esistente!").into_response()
+      Err(_) => (StatusCode::BAD_REQUEST, "Username already taken!").into_response()
   }
 }
 
 async fn login(auth: AuthSession<User, i64, SessionSqlitePool, SqlitePool>, State(pool): State<Pool<Sqlite>>, Json(user): Json<UserRequest>) -> impl IntoResponse {
   let rows: Vec<UserSql> = sqlx::query_as("SELECT * FROM user WHERE username = ?1").bind(&user.username).fetch_all(&pool).await.unwrap();
-  if rows.len() == 0 {
-    let msg = format!("Username : {} is not registered", user.username);
-    (StatusCode::BAD_REQUEST, msg).into_response()
-  } else {
+  if rows.len() == 0 { (StatusCode::BAD_REQUEST, "Username not registered").into_response() } 
+  else {
       let is_valid = bcrypt::verify(user.password, &rows[0].password).unwrap();
       if is_valid {
         auth.login_user(rows[0].id as i64);
-        let resp = json!({ "success": true, "message": "Login successful!" });
-        (StatusCode::OK, Json(resp)).into_response()
+        (StatusCode::OK, Json(json!({ "success": true, "message": "Login successful!" }))).into_response()
       } else {
-        let resp = json!({ "success": false, "message": "Login error!" });
-        (StatusCode::UNAUTHORIZED, Json(resp)).into_response()
+        (StatusCode::UNAUTHORIZED, Json(json!({ "success": false, "message": "Login error!" }))).into_response()
       }
   }
 }
@@ -205,82 +171,41 @@ async fn log_out(auth: AuthSession<User, i64, SessionSqlitePool, SqlitePool>) ->
 }
 
 async fn get_list_invites(Extension(user): Extension<User>,State(pool): State<SqlitePool>) -> impl IntoResponse {
-  let rows: Vec<Team> = sqlx::query_as(
-        r#"
-        SELECT t.id, t.name
-        FROM team t
-        INNER JOIN invite i ON i.id_team = t.id
-        WHERE i.id_user = ?1
-        "#
-    ).bind(user.id).fetch_all(&pool).await.unwrap();
-
-    (StatusCode::OK, Json(rows))
+  let rows: Vec<Team> = sqlx::query_as(r#"SELECT t.id, t.name FROM team t INNER JOIN invite i ON i.id_team = t.id WHERE i.id_user = ?1"#).bind(user.id).fetch_all(&pool).await.unwrap();
+  (StatusCode::OK, Json(rows))
 }
 
 async fn get_teams(Extension(user): Extension<User>,State(pool): State<SqlitePool>) -> impl IntoResponse {
-  let rows: Vec<Team> = sqlx::query_as(
-        r#"
-        SELECT t.id, t.name
-        FROM team t
-        INNER JOIN user_team ut ON ut.id_team = t.id
-        WHERE ut.id_user = ?1
-        "#
-    ).bind(user.id).fetch_all(&pool).await.unwrap();
-
-    (StatusCode::OK, Json(rows))
+  let rows: Vec<Team> = sqlx::query_as(r#"SELECT t.id, t.name FROM team t INNER JOIN user_team ut ON ut.id_team = t.id WHERE ut.id_user = ?1"#).bind(user.id).fetch_all(&pool).await.unwrap();
+  (StatusCode::OK, Json(rows))
 }
 
-async fn get_messages(
-    Extension(user): Extension<User>,
-    State(pool): State<SqlitePool>,
-    Query(params): Query<HashMap<String, String>>
-) -> impl IntoResponse {
-    // Usiamo team_id dalla query
+async fn get_messages(Extension(user): Extension<User>, State(pool): State<SqlitePool>, Query(params): Query<HashMap<String, String>>) -> impl IntoResponse {
     let team_id = params.get("team_id").and_then(|v| v.parse::<i64>().ok()).unwrap_or(0);
-    
     if team_id == 0 { return (StatusCode::BAD_REQUEST, "Invalid Team ID").into_response(); }
 
-    // Controllo sicurezza: l'utente è nel gruppo?
-    let user_in_team: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user_team WHERE id_user = ?1 AND id_team = ?2)")
-        .bind(user.id).bind(team_id).fetch_one(&pool).await.unwrap_or(false);
-
+    let user_in_team: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user_team WHERE id_user = ?1 AND id_team = ?2)").bind(user.id).bind(team_id).fetch_one(&pool).await.unwrap_or(false);
     if !user_in_team { return (StatusCode::FORBIDDEN, "Non sei membro di questo gruppo").into_response(); }
 
-    // Selezioniamo anche m.data
-    let sql = r#"
-        SELECT u.username, m.message, m.ora, m.data
-        FROM message m
-        JOIN user u ON m.id_user = u.id
-        WHERE m.id_team = ?1
-        ORDER BY m.data ASC, m.ora ASC
-    "#;
-
-    let rows: Vec<MessageResponse> = sqlx::query_as(sql).bind(team_id).fetch_all(&pool).await.unwrap_or(vec![]);
+    let rows: Vec<MessageResponse> = sqlx::query_as(r#"SELECT u.username, m.message, m.ora, m.data FROM message m JOIN user u ON m.id_user = u.id WHERE m.id_team = ?1 ORDER BY m.data ASC, m.ora ASC"#).bind(team_id).fetch_all(&pool).await.unwrap_or(vec![]);
     (StatusCode::OK, Json(rows)).into_response()
 }
 
-pub async fn create_team(
-    Extension(user): Extension<User>, 
-    State(pool): State<SqlitePool>, 
-    Json(body): Json<Value> 
-) -> impl IntoResponse {
+pub async fn create_team(Extension(user): Extension<User>, State(pool): State<SqlitePool>, Json(body): Json<Value>) -> impl IntoResponse {
     let name = body.get("name").and_then(|v| v.as_str()).unwrap_or("");
     if name.trim().is_empty() { return (StatusCode::BAD_REQUEST, "Il nome del gruppo non può essere vuoto").into_response(); }
 
-    // NESSUN CONTROLLO UNICITÀ SUL NOME -> Permette duplicati
     let insert_res = sqlx::query("INSERT INTO team (name) VALUES (?1)").bind(name).execute(&pool).await;
-  
-    if let Err(e) = insert_res {
-        return (StatusCode::INTERNAL_SERVER_ERROR, format!("DB Error: {}", e)).into_response();
-    }
-    let team_id=insert_res.unwrap().last_insert_rowid();
+    if let Err(e) = insert_res { return (StatusCode::INTERNAL_SERVER_ERROR, format!("DB Error: {}", e)).into_response(); }
     
+    let team_id=insert_res.unwrap().last_insert_rowid();
     let link_res = sqlx::query("INSERT INTO user_team (id_user, id_team) VALUES (?1, ?2)").bind(user.id).bind(team_id).execute(&pool).await;
     if let Err(_) = link_res { return (StatusCode::INTERNAL_SERVER_ERROR, "Error linking user").into_response(); }
 
     (StatusCode::CREATED, Json(json!({ "ok": true, "team": { "id": team_id, "name": name } }))).into_response()
 }
 
+// Handler per uscire dal gruppo (già nel gruppo)
 async fn leave_team(Extension(user): Extension<User>, State(pool): State<SqlitePool>, Json(body): Json<Value>) -> impl IntoResponse {
     let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
     if team_id == 0 { return (StatusCode::BAD_REQUEST, "Invalid Team ID").into_response(); }
@@ -291,29 +216,27 @@ async fn leave_team(Extension(user): Extension<User>, State(pool): State<SqliteP
     }
 }
 
-async fn send_message(
-    Extension(user): Extension<User>,
-    State(pool): State<SqlitePool>,
-    Extension(chat_rooms): Extension<ChatRooms>,
-    Json(body): Json<Value> 
-) -> impl IntoResponse{
-
-    let user_id=user.id;
+// Handler per rifiutare un invito
+async fn decline(Extension(user): Extension<User>, State(pool): State<SqlitePool>, Json(body): Json<Value>) -> impl IntoResponse {
     let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
-    let msg = body.get("message").and_then(|v| v.as_str()).unwrap_or("");
-
     if team_id == 0 { return (StatusCode::BAD_REQUEST, "Invalid Team ID").into_response(); }
 
-    // Check se utente è nel team
-    match sqlx::query_scalar::<_,i64>("SELECT id_user FROM user_team WHERE id_user = ?1 AND id_team=?2").bind(user_id).bind(team_id).fetch_one(&pool).await {
+    match sqlx::query("DELETE FROM invite WHERE id_user = ?1 AND id_team = ?2").bind(user.id).bind(team_id).execute(&pool).await {
+        Ok(_) => (StatusCode::OK, "Invito rifiutato").into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+async fn send_message(Extension(user): Extension<User>, State(pool): State<SqlitePool>, Extension(chat_rooms): Extension<ChatRooms>, Json(body): Json<Value>) -> impl IntoResponse{
+    let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
+    let msg = body.get("message").and_then(|v| v.as_str()).unwrap_or("");
+    if team_id == 0 { return (StatusCode::BAD_REQUEST, "Invalid Team ID").into_response(); }
+
+    match sqlx::query_scalar::<_,i64>("SELECT id_user FROM user_team WHERE id_user = ?1 AND id_team=?2").bind(user.id).bind(team_id).fetch_one(&pool).await {
         Ok(_)=> {}, Err(_) => return (StatusCode::UNAUTHORIZED, "User not in team").into_response(),
     };
 
-    let result = sqlx::query(
-        "INSERT INTO message (id_user,id_team,message,data,ora) VALUES (?1,?2,?3, CURRENT_DATE, CURRENT_TIME)"
-    )
-    .bind(user_id).bind(team_id).bind(msg).execute(&pool).await; 
-
+    let result = sqlx::query("INSERT INTO message (id_user,id_team,message,data,ora) VALUES (?1,?2,?3, CURRENT_DATE, CURRENT_TIME)").bind(user.id).bind(team_id).bind(msg).execute(&pool).await; 
     match result {
         Ok(_) => {
             let msg_payload = json!({
@@ -322,11 +245,7 @@ async fn send_message(
                 "ora": Local::now().format("%H:%M:%S").to_string(),
                 "data": Local::now().format("%Y-%m-%d").to_string() 
             });
-            let msg_string = serde_json::to_string(&msg_payload).unwrap_or_default();
-
-            if let Some(tx) = chat_rooms.get(&team_id) {
-                let _ = tx.send(msg_string); 
-            }
+            let _ = chat_rooms.get(&team_id).map(|tx| tx.send(serde_json::to_string(&msg_payload).unwrap_or_default()));
             (StatusCode::OK, "Inviato").into_response()
         },
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
@@ -334,35 +253,47 @@ async fn send_message(
 }
 
 async fn accept(Extension(user): Extension<User>, State(pool): State<SqlitePool>, Json(body): Json<Value>) -> impl IntoResponse{
-    let user_id = user.id;
     let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
     if team_id == 0 { return (StatusCode::BAD_REQUEST, "Invalid Team ID").into_response(); }
 
     let mut tx = match pool.begin().await { Ok(tx) => tx, Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Transaction Error").into_response(), };
-    if let Err(_) = sqlx::query("INSERT INTO user_team (id_user, id_team) VALUES (?1, ?2)").bind(user_id).bind(team_id).execute(&mut *tx).await {
+    if let Err(_) = sqlx::query("INSERT INTO user_team (id_user, id_team) VALUES (?1, ?2)").bind(user.id).bind(team_id).execute(&mut *tx).await {
         return (StatusCode::INTERNAL_SERVER_ERROR, "Errore inserimento").into_response();
     }
-    if let Err(_) = sqlx::query("DELETE FROM invite WHERE id_user = ?1 AND id_team = ?2").bind(user_id).bind(team_id).execute(&mut *tx).await {
+    if let Err(_) = sqlx::query("DELETE FROM invite WHERE id_user = ?1 AND id_team = ?2").bind(user.id).bind(team_id).execute(&mut *tx).await {
         return (StatusCode::INTERNAL_SERVER_ERROR, "Errore rimozione invito").into_response();
     }
     match tx.commit().await { Ok(_) => (StatusCode::OK, "Accettato").into_response(), Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Commit fail").into_response(), }
 }
 
-async fn invite(Extension(_user): Extension<User>, State(pool): State<SqlitePool>, Json(body): Json<Value>) -> impl IntoResponse {
+async fn invite(Extension(user): Extension<User>, State(pool): State<SqlitePool>, Json(body): Json<Value>) -> impl IntoResponse {
     let username: &str = body.get("username").and_then(|v| v.as_str()).unwrap_or("");
     let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
 
     if username.is_empty() || team_id == 0 { return (StatusCode::BAD_REQUEST, "Invalid payload").into_response(); }
     
-    let user_id: i64 = match sqlx::query_scalar("SELECT id FROM user WHERE username = ?1").bind(username).fetch_one(&pool).await {
-        Ok(id) => id, Err(_) => return (StatusCode::NOT_FOUND, "User not found").into_response(),
+    let target_user_id: i64 = match sqlx::query_scalar("SELECT id FROM user WHERE username = ?1").bind(username).fetch_one(&pool).await {
+        Ok(id) => id, Err(_) => return (StatusCode::NOT_FOUND, "Utente non trovato").into_response(),
     };
-    // Verifica team per ID
-    let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM team WHERE id = ?1)").bind(team_id).fetch_one(&pool).await.unwrap_or(false);
-    if !exists { return (StatusCode::NOT_FOUND, "Team not found").into_response(); }
 
-    match sqlx::query("INSERT INTO invite (id_user, id_team) VALUES (?1, ?2)").bind(user_id).bind(team_id).execute(&pool).await {
-        Ok(_) => (StatusCode::OK, "Inserito").into_response(), Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Errore").into_response(),
+    // 1. CONTROLLO AUTO-INVITO
+    if target_user_id == user.id {
+        return (StatusCode::BAD_REQUEST, "Non puoi invitare te stesso!").into_response();
+    }
+
+    // 2. CONTROLLO ESISTENZA TEAM
+    let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM team WHERE id = ?1)").bind(team_id).fetch_one(&pool).await.unwrap_or(false);
+    if !exists { return (StatusCode::NOT_FOUND, "Gruppo non trovato").into_response(); }
+
+    // 3. CONTROLLO SE UTENTE È GIÀ NEL GRUPPO
+    let already_in: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user_team WHERE id_user = ?1 AND id_team = ?2)")
+        .bind(target_user_id).bind(team_id).fetch_one(&pool).await.unwrap_or(false);
+    if already_in {
+        return (StatusCode::BAD_REQUEST, "L'utente è già membro del gruppo").into_response();
+    }
+
+    match sqlx::query("INSERT INTO invite (id_user, id_team) VALUES (?1, ?2)").bind(target_user_id).bind(team_id).execute(&pool).await {
+        Ok(_) => (StatusCode::OK, "Inserito").into_response(), Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Errore (forse già invitato)").into_response(),
     }
 }
 
@@ -391,7 +322,6 @@ async fn handle_socket(socket: WebSocket, user: User, chat_rooms: ChatRooms, tea
     let tx = chat_rooms.entry(team_id).or_insert_with(|| broadcast::channel(100).0).clone(); 
     let mut rx = tx.subscribe(); 
     let (mut sender, mut receiver) = socket.split();
-
     let mut send_task = tokio::spawn(async move {
         loop {
             match rx.recv().await {
@@ -401,9 +331,7 @@ async fn handle_socket(socket: WebSocket, user: User, chat_rooms: ChatRooms, tea
             }
         }
     });
-
     let mut recv_task = tokio::spawn(async move { while let Some(Ok(Message::Close(_))) = receiver.next().await { break; } });
-
     tokio::select! { _ = &mut send_task => recv_task.abort(), _ = &mut recv_task => send_task.abort(), }
     println!("{} Disconnected {}", "[INFO]".cyan(), user.username);
 }
