@@ -18,7 +18,7 @@ function NavHeader(props) {
                     {/* LOGO */}
                     <Col className="col-3 d-flex align-items-center">
                         <Link to="/" className="navbar-brand d-flex align-items-center gap-2">
-                            <i className="bi bi-chat-dots fs-3"></i> {/* Icona un po' più grande */}
+                            <span className="fs-3">🦀</span> {/* Icona un po' più grande */}
                             <span className="fs-4 fw-bold">Ruggine Chat</span> {/* Testo un po' più grande */}
                         </Link>
                     </Col>
