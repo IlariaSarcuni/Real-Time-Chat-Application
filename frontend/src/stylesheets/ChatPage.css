@@ -1,0 +1,257 @@
+/* *** ChatPage.css *** */
+
+/* *** LIGHT MODE *** */
+.light {
+    background-color: #F7F7F7; 
+    color: #212529; 
+}
+
+.light h6 {
+    color: #888888 !important; 
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+}
+
+.light .team-name {
+    color: #888888 !important;
+}
+
+.dark h6 {
+    color: #AAAAAA !important; 
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+}
+
+.dark .team-name {
+    color: #AAAAAA !important;
+}
+
+
+/* --- BOTTONI ACCENTO PRIMARY (Light Mode) --- */
+.light .btn-primary {
+    background-color: #B7410E !important; /* Arancione Bruciato Light Mode */
+    border-color: #B7410E !important;
+}
+.light .btn-primary:hover {
+    background-color: #8C320A !important; /* Versione più scura all'hover */
+    border-color: #8C320A !important;
+}
+/* Stile per il bottone di invito nel modal */
+.light .modal-footer .btn-success {
+    background-color: #B7410E !important; /* Colora il bottone "Invia" invito */
+    border-color: #B7410E !important;
+}
+.light .modal-footer .btn-success:hover {
+    background-color: #8C320A !important;
+    border-color: #8C320A !important;
+}
+/* --- PANNELLI & SEZIONI --- */
+
+/* Sidebar e Contenitori */
+.light .chat-sidebar {
+    background-color: #FFFFFF !important; /* Sidebar Bianco Pulito */
+    border-color: #E0E0E0 !important;
+}
+
+/* Chat Header, Input Area e Bordi */
+.light .p-3.border-bottom,
+.light .p-3.border-top {
+    background-color: #FFFFFF !important; /* Header e Input area Bianchi */
+    border-color: #E0E0E0 !important;
+}
+
+/* Chat Body (Area messaggi) */
+.light .chat-content {
+    background-color: #F0F0F0 !important; /* Sfondo area messaggi Clean Light Grey */
+}
+
+/* --- COLONNA GRUPPI & INVITI --- */
+
+/* Gruppi List Item Base */
+.light .list-group-item {
+    color: #212529;
+    background-color: transparent;
+    border-color: transparent; /* Bordi trasparenti per look moderno */
+    padding-left: 1.5rem; /* Padding uniforme */
+    transition: background-color 0.15s ease-in-out;
+}
+.light .list-group-item:hover:not(.active) {
+    background-color: #FAFAFA !important;
+}
+
+/* Gruppo Attivo (Accento Pulito) */
+.light .list-group-item.active {
+    background-color: #FFEEEC !important; /* Accento ROSSO CHIARO */
+    border-left: 4px solid #B7410E !important; /* Bordo Arancione Bruciato più definito */
+    color: #B7410E !important;
+    font-weight: 700;
+    padding-left: calc(1.5rem - 4px); /* Compensazione per bordo */
+}
+
+/* Inviti */
+.light .invite-section {
+    background-color: #FFFBEB !important; /* Sfondo Inviti Giallo tenue */
+    border-color: #ffe5a8 !important;
+}
+
+.light .invite-item {
+    background-color: #FFFFFF !important;
+    border-color: #E0E0E0 !important;
+}
+
+
+/* --- CHAT CONTENT --- */
+
+/* BOLLE MESSAGGI */
+
+/* Messaggio Inviato (Mine - bg-success.text-white) */
+.light .bg-success.text-white {
+    background-color: #DFFFD8 !important; /* Verde Chiaro */
+    color: #212529 !important; /* Testo Scuro */
+    border-color: #BEE5C7 !important;
+}
+.light .bg-success.text-white .text-light.opacity-75 {
+    color: #666666 !important; /* Colore ora nel mio messaggio */
+}
+
+/* Messaggio Ricevuto (Theirs - bg-white.text-dark) */
+.light .bg-white { /* Targeting bg-white senza .text-dark per essere più generici */
+    background-color: #FFFFFF !important; /* Bianco */
+    color: #212529 !important; /* Testo Scuro */
+    border-color: #E0E0E0 !important;
+}
+
+/* Badge Data */
+.light .badge.bg-secondary {
+    background-color: #DDDDDD !important;
+    color: #555555 !important;
+    border: 1px solid #CCCCCC;
+}
+
+/* Campo di Input Messaggio */
+.light .form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(183, 65, 14, 0.25) !important; 
+}
+
+
+/* ====================================================== */
+/* >>> DARK MODE (Industriale: Scuro, Definito) <<< */
+/* ====================================================== */
+
+.dark {
+    background-color: #1A1A1A; /* Sfondo Body */
+    color: #E0E0E0; /* Testo Standard */
+}
+
+/* --- PANNELLI & SEZIONI --- */
+
+/* Sidebar e Contenitori (Pannelli Industriali) */
+.dark .chat-sidebar,
+.dark .p-3.border-bottom, /* Chat Header */
+.dark .p-3.border-top    /* Input Area */
+{
+    background-color: #1F1F1F !important; /* Sfondo Pannello: Scuro, definito */
+    border-color: #383838 !important; /* Bordi scuri/definiti */
+}
+
+/* CHAT BODY (Area Messaggi) */
+.dark .chat-content { /* Usiamo chat-content per la colonna intera */
+    background-color: #0D0D0D !important; /* Sfondo chat molto scuro (quasi nero) per risalto */
+}
+
+/* Testi Tenui */
+.dark .text-muted { color: #888888 !important; } /* Grigio scuro per i testi attenuati */
+.dark .text-dark { color: #E0E0E0 !important; } /* Assicuriamo che il testo scuro sia chiaro nel dark mode */
+
+
+/* --- COLONNA GRUPPI & INVITI --- */
+
+/* Gruppi List Item Base */
+.dark .list-group-item {
+    color: #C0C0C0;
+    background-color: transparent;
+    border-color: transparent; /* Rimuovi bordi tra i gruppi */
+    padding-left: 1.5rem; /* Padding uniforme */
+    transition: background-color 0.15s ease-in-out;
+}
+
+/* Hover State */
+.dark .list-group-item:hover:not(.active) {
+    background-color: #2A2A2A !important; /* Scuro ma notabile */
+}
+
+/* Gruppo Attivo (Accento Industriale) */
+.dark .list-group-item.active {
+    background-color: #332115 !important; /* Base di supporto arancione scura */
+    border-left: 4px solid #D64F10 !important; /* Bordo Arancione Bruciato definito */
+    color: #E0E0E0 !important; /* Testo attivo bianco/chiaro */
+    font-weight: 700;
+    padding-left: calc(1.5rem - 4px); /* Compensazione per bordo */
+}
+
+/* INVITI - Stile Coerente con l'Accento */
+.dark .invite-section {
+    background-color: rgba(214, 79, 16, 0.15) !important; /* Sfondo Inviti: Arancione traslucido più intenso */
+    border-color: #383838 !important; /* Bordo scuro, non arancione */
+}
+
+.dark .invite-item {
+    background-color: #2A2A2A !important; /* Sfondo item invito scuro */
+    color: #E0E0E0 !important;
+    border-color: #444444 !important;
+}
+
+
+/* --- CHAT CONTENT --- */
+
+/* BOLLE MESSAGGI */
+
+/* Messaggio Ricevuto (Theirs - bg-white) */
+.dark .bg-white {
+    background-color: #303030 !important; /* Grigio scuro per contrasto */
+    color: #E0E0E0 !important;
+    border-color: #444444 !important;
+}
+
+/* Messaggio Inviato (Mine - bg-success.text-white) */
+.dark .bg-success.text-white {
+    background-color: #445A6B !important; /* Muted Blue-Gray per look industriale */
+    color: #E0E0E0 !important;
+    border-color: #556D7F !important;
+}
+.dark .bg-success.text-white .text-light.opacity-75 {
+    color: #DDDDDD !important; /* Colore ora nel mio messaggio */
+}
+
+/* Badge Data */
+.dark .badge.bg-secondary {
+    background-color: #333333 !important;
+    color: #DDDDDD !important;
+    border: 1px solid #444444;
+}
+
+/* Campo di Input Messaggio */
+.dark .form-control {
+    background-color: #2A2A2A;
+    border-color: #444444;
+    color: #E0E0E0;
+}
+
+.dark .form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(214, 79, 16, 0.35) !important; /* Ombra Arancione in focus */
+}
+
+/* Bottone di Invio (Accento Primario) */
+.dark .btn-primary {
+    background-color: #D64F10 !important;
+    border-color: #D64F10 !important;
+}
+.dark .btn-primary:hover {
+    background-color: #8C320A !important; 
+    border-color: #8C320A !important;
+}
+
+/* Welcome Screen */
+.dark .chat-content .text-muted { 
+    color: #555555 !important; 
+}

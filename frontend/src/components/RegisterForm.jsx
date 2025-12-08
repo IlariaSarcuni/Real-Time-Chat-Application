@@ -1,6 +1,7 @@
 import { useState, useContext } from "react";
 import { Form, Button, Alert, Row, Col, Card } from "react-bootstrap";
 import { useNavigate, Link } from "react-router-dom";
+import LineSeparator from "./utilities/LineSeparator";
 import API from "../API";
 import ThemeContext from "../ThemeContext";
 
@@ -56,20 +57,15 @@ function RegisterForm() {
         <div className={theme}>
             <Row className="justify-content-center align-items-center min-vh-100">
                 <Col xs={12} sm={10} md={8} lg={5}>
-                    <Card className="shadow-lg border-0">
+                    <Card className="auth-card">
+                        <Card.Title className="card-title">
+                            <h3>Registrati a Ruggine</h3>
+                        </Card.Title>
                         <Card.Body className="p-5">
-                            <div className="text-center mb-4">
-                                <h2 className="fw-bold text-primary">Registrati</h2>
-                                <p className="text-muted">Crea il tuo account per Ruggine Chat</p>
-                            </div>
-
-                            <Alert dismissible show={show} onClose={() => setShow(false)} variant="danger">
-                                {errorMessage}
-                            </Alert>
-
                             <Form onSubmit={handleSubmit}>
+                                <Alert dismissible show={show} onClose={() => setShow(false)} variant="danger">{errorMessage}</Alert>
                                 <Form.Group className="mb-3">
-                                    <Form.Label>Username</Form.Label>
+                                    <Form.Label className="fw-semibold">Username<span className="mandatory">*</span></Form.Label>
                                     <Form.Control 
                                         type="text" 
                                         placeholder="Scegli un username" 
@@ -80,7 +76,7 @@ function RegisterForm() {
                                 </Form.Group>
 
                                 <Form.Group className="mb-3">
-                                    <Form.Label>Password</Form.Label>
+                                    <Form.Label className="fw-semibold">Password<span className="mandatory">*</span></Form.Label>
                                     <Form.Control 
                                         type="password" 
                                         placeholder="Password (min 6 caratteri)" 
@@ -91,7 +87,7 @@ function RegisterForm() {
                                 </Form.Group>
 
                                 <Form.Group className="mb-4">
-                                    <Form.Label>Conferma Password</Form.Label>
+                                    <Form.Label className="fw-semibold">Conferma Password<span className="mandatory">*</span></Form.Label>
                                     <Form.Control 
                                         type="password" 
                                         placeholder="Ripeti la password" 
@@ -102,16 +98,13 @@ function RegisterForm() {
                                 </Form.Group>
 
                                 <div className="d-grid gap-2">
-                                    <Button variant="primary" size="lg" type="submit" disabled={loading}>
+                                    <Button className="mt-3 login-button" size="lg" type="submit" disabled={loading}>
                                         {loading ? 'Registrazione...' : 'Crea Account'}
                                     </Button>
+                                    <LineSeparator>oppure</LineSeparator>
+                                    <Link className="btn btn-lg registration-button" to={"/login"}>Accedi</Link>
                                 </div>
                             </Form>
-
-                            <div className="text-center mt-4">
-                                <span className="text-muted">Hai già un account? </span>
-                                <Link to="/login" className="fw-bold text-decoration-none">Accedi qui</Link>
-                            </div>
                         </Card.Body>
                     </Card>
                 </Col>
