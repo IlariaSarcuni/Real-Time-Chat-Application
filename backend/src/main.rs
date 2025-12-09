@@ -24,10 +24,10 @@ use dashmap::DashMap;
 use tokio::sync::broadcast;
 use futures_util::{sink::SinkExt, stream::StreamExt};
 use chrono::Local;
-use sysinfo::{System};
 use std::io::Write;
 use std::fs::OpenOptions;
 
+use sysinfo::{System, get_current_pid};
 #[derive(Serialize, sqlx::FromRow)]
 struct Team {
     id: i64,
@@ -71,27 +71,39 @@ async fn main() {
 
 async fn cpu_logger_task() {
     let mut sys = System::new_all();
+    
+    // Recuperiamo il PID (Process ID) del nostro programma
+    // get_current_pid() ora restituisce un Result, quindi usiamo .ok() o expect
+    let pid = get_current_pid().expect("Impossibile recuperare il PID");
+
     let mut log_file = OpenOptions::new()
         .create(true)
         .append(true)
         .open("cpu_log.txt")
         .expect("Impossibile aprire il file di log della CPU");
 
-    println!("{}", "Avvio del logger CPU (ogni 2 minuti)...".yellow());
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-
+    println!("{}", "Avvio del logger CPU Processo (ogni 2 minuti)...".yellow());
+    
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(120)).await;
-        sys.refresh_cpu(); 
-        let log_entry = format!("[{}] - Utilizzo CPU: {:.2}%\n", Local::now().to_rfc3339(), sys.global_cpu_info().cpu_usage());
-        let _ = log_file.write_all(log_entry.as_bytes());
+        sys.refresh_processes(); 
+        
+        // Cerchiamo il nostro processo specifico
+        if let Some(process) = sys.process(pid) {
+            let usage = process.cpu_usage();
+            let log_entry = format!("[{}] - CPU Ruggine: {:.4}%\n", Local::now().to_rfc3339(), usage);
+            
+            // Scrittura su file (ignoriamo errori di scrittura per non fermare il server)
+            let _ = log_file.write_all(log_entry.as_bytes());
+            
+        }
     }
 }
 
 async fn db() -> Pool<Sqlite> {
     let pool = sqlx::sqlite::SqlitePool::connect("sqlite://db.sqlite")
         .await
-        .expect("\n❌ ERRORE: Impossibile trovare 'db.sqlite'.\nAssicurati di aver creato il database manualmente!\n");
+        .expect("\nERRORE: Impossibile trovare 'db.sqlite'.\nAssicurati di aver creato il database manualmente!\n");
     pool
 }
 
@@ -270,30 +282,46 @@ async fn invite(Extension(user): Extension<User>, State(pool): State<SqlitePool>
     let username: &str = body.get("username").and_then(|v| v.as_str()).unwrap_or("");
     let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
 
-    if username.is_empty() || team_id == 0 { return (StatusCode::BAD_REQUEST, "Invalid payload").into_response(); }
+    // 1. Validazione Input
+    if username.is_empty() || team_id == 0 { 
+        return (StatusCode::BAD_REQUEST, "Invalid payload").into_response(); 
+    }
+
+    // 2. CHECK SICUREZZA (NUOVO): Il chiamante fa parte del gruppo?
+    let caller_in_team: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user_team WHERE id_user = ?1 AND id_team = ?2)")
+        .bind(user.id).bind(team_id).fetch_one(&pool).await.unwrap_or(false);
+
+    if !caller_in_team {
+        return (StatusCode::FORBIDDEN, "Non puoi invitare persone in un gruppo di cui non fai parte!").into_response();
+    }    
     
+    // 3. Trova l'ID dell'utente da invitare
     let target_user_id: i64 = match sqlx::query_scalar("SELECT id FROM user WHERE username = ?1").bind(username).fetch_one(&pool).await {
-        Ok(id) => id, Err(_) => return (StatusCode::NOT_FOUND, "Utente non trovato").into_response(),
+        Ok(id) => id, 
+        Err(_) => return (StatusCode::NOT_FOUND, "Utente non trovato").into_response(),
     };
 
-    // 1. CONTROLLO AUTO-INVITO
+    // 4. Controllo Auto-invito
     if target_user_id == user.id {
         return (StatusCode::BAD_REQUEST, "Non puoi invitare te stesso!").into_response();
     }
 
-    // 2. CONTROLLO ESISTENZA TEAM
-    let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM team WHERE id = ?1)").bind(team_id).fetch_one(&pool).await.unwrap_or(false);
-    if !exists { return (StatusCode::NOT_FOUND, "Gruppo non trovato").into_response(); }
-
-    // 3. CONTROLLO SE UTENTE È GIÀ NEL GRUPPO
+    // 5. Controllo se l'utente invitato è GIÀ nel gruppo
     let already_in: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user_team WHERE id_user = ?1 AND id_team = ?2)")
         .bind(target_user_id).bind(team_id).fetch_one(&pool).await.unwrap_or(false);
+    
     if already_in {
         return (StatusCode::BAD_REQUEST, "L'utente è già membro del gruppo").into_response();
     }
 
-    match sqlx::query("INSERT INTO invite (id_user, id_team) VALUES (?1, ?2)").bind(target_user_id).bind(team_id).execute(&pool).await {
-        Ok(_) => (StatusCode::OK, "Inserito").into_response(), Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Errore (forse già invitato)").into_response(),
+    // 6. Esecuzione Invito (Inserimento nel DB)
+    // Usiamo INSERT OR IGNORE o gestiamo l'errore per evitare doppi inviti pendenti
+    match sqlx::query("INSERT INTO invite (id_user, id_team) VALUES (?1, ?2)")
+        .bind(target_user_id).bind(team_id)
+        .execute(&pool).await 
+    {
+        Ok(_) => (StatusCode::OK, "Invito inviato con successo").into_response(), 
+        Err(_) => (StatusCode::CONFLICT, "Utente probabilmente già invitato").into_response(), // Gestione base dell'errore
     }
 }
 

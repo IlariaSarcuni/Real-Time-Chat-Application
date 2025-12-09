@@ -3,6 +3,13 @@ name = "backend"
 version = "0.1.0"
 edition = "2024"
 
+[profile.release]
+opt-level = "z"     # Ottimizza per dimensione
+lto = true          # Link Time Optimization
+codegen-units = 1   # Massima compressione
+strip = true        # Rimuove simboli di debug
+panic = "abort"
+
 [dependencies]
 colored = "2.0"
 
