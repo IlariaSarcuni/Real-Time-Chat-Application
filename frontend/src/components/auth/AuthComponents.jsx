@@ -1,11 +1,11 @@
 import { Alert, Button, Card, Form, Row, Col } from "react-bootstrap";
-import LineSeparator from "./utilities/LineSeparator";
-import ThemeContext from "../ThemeContext";
-import "../stylesheets/AuthComponents.css";
-
-import API from "../API.js";
 import { useContext, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+
+import LineSeparator from "../common/LineSeparator";
+import ThemeContext from "../../contexts/ThemeContext";
+import "../../stylesheets/AuthComponents.css";
+import API from "../../API.js";
 
 function LoginForm() {
 

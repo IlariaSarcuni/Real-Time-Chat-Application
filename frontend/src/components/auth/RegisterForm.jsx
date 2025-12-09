@@ -1,9 +1,10 @@
 import { useState, useContext } from "react";
 import { Form, Button, Alert, Row, Col, Card } from "react-bootstrap";
 import { useNavigate, Link } from "react-router-dom";
-import LineSeparator from "./utilities/LineSeparator";
-import API from "../API";
-import ThemeContext from "../ThemeContext";
+
+import LineSeparator from "../common/LineSeparator";
+import API from "../../API";
+import ThemeContext from "../../contexts/ThemeContext";
 
 function RegisterForm() {
     const [username, setUsername] = useState('');

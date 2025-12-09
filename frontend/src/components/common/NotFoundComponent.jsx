@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import { Col, Image, Row } from "react-bootstrap";
 import { Link } from "react-router-dom";
-import ThemeContext from "../ThemeContext";
+import ThemeContext from "../../contexts/ThemeContext";
 
 function NotFoundComponent() {
 

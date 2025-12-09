@@ -5,14 +5,22 @@ import { useEffect, useState } from "react";
 import { Container } from "react-bootstrap";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
-import ThemeContext from './ThemeContext';
+// --- CAMBIAMENTO 1: Contexts ---
+import ThemeContext from './contexts/ThemeContext'; 
+
+// API è rimasto nella root, quindi questo va bene
 import API from './API';
 
-import NavHeader from "./components/NavHeader";
-import { LoginForm } from './components/AuthComponents';
-import RegisterForm from './components/RegisterForm'; 
-import ChatPage from './components/ChatPage'; 
-import NotFoundComponent from './components/NotFoundComponent';
+// --- CAMBIAMENTO 2: Componenti Common ---
+import NavHeader from "./components/common/NavHeader";
+import NotFoundComponent from './components/common/NotFoundComponent';
+
+// --- CAMBIAMENTO 3: Componenti Auth ---
+import { LoginForm } from './components/auth/AuthComponents';
+import RegisterForm from './components/auth/RegisterForm'; 
+
+// --- CAMBIAMENTO 4: Componenti Chat ---
+import ChatPage from './components/chat/ChatPage'; 
 
 function App() {
   const [theme, setTheme] = useState(() => {
@@ -73,9 +81,7 @@ function App() {
         <Routes>
           <Route path="/" element={
             <>
-              
               <NavHeader toggleTheme={toggleTheme} loggedIn={loggedIn} logout={handleLogout} user={user} />            
-            
               <Container fluid className="p-0 flex-grow-1 position-relative" style={{ overflow: 'hidden' }}>
                 <Outlet />
               </Container>

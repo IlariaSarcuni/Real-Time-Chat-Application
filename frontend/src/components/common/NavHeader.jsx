@@ -2,9 +2,9 @@ import { Button, Container, Row, Col, Navbar } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { useContext } from "react";
 
-import ThemeContext from "../ThemeContext";
+import ThemeContext from "../../contexts/ThemeContext";
 
-import "../stylesheets/NavHeader.css";
+import "../../stylesheets/NavHeader.css";
 
 function NavHeader(props) {
 
