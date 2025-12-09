@@ -8,7 +8,6 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import ThemeContext from './ThemeContext';
 import API from './API';
 
-// Componenti
 import NavHeader from "./components/NavHeader";
 import { LoginForm } from './components/AuthComponents';
 import RegisterForm from './components/RegisterForm'; 
@@ -16,13 +15,20 @@ import ChatPage from './components/ChatPage';
 import NotFoundComponent from './components/NotFoundComponent';
 
 function App() {
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState(() => {
+    const savedTheme = localStorage.getItem('app-theme');
+    return savedTheme ? savedTheme : 'light';
+  });
   
   const [loggedIn, setLoggedIn] = useState(false);
   const [user, setUser] = useState(null); 
   const [loadingInfo, setLoadingInfo] = useState(true);
 
   const location = useLocation();
+
+  useEffect(() => {
+    localStorage.setItem('app-theme', theme);
+  }, [theme]);
 
   const toggleTheme = () => {
     setTheme(currTheme => currTheme === "light" ? "dark" : "light"); 

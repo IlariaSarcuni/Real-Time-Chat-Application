@@ -43,7 +43,7 @@ function NavHeader(props) {
                         {/* Se è loggato allora logout altrimmenti nulla */}
                         {props.loggedIn ? (
                             <Button variant="outline-light" className="d-flex align-items-center fw-semibold px-3 py-2" onClick={props.logout}>
-                                <i className="bi bi-box-arrow-right me-2"></i> Logout
+                                Logout
                             </Button>
                         ) : null}
                     </Col>

@@ -4,6 +4,34 @@ import API from '../API';
 import dayjs from 'dayjs';
 import ThemeContext from '../ThemeContext';
 
+// Funzione per ottenere un colore unico basato sullo username
+const getColorFromUsername = (username) => {
+    if (!username) return '#0d6efd';
+    
+    const colors = [
+        '#d63384', 
+        '#fd7e14', 
+        '#198754', 
+        '#20c997', 
+        '#0dcaf0', 
+        '#6610f2', 
+        '#dc3545', 
+        '#0d6efd',
+        '#fd7e14', 
+        '#6f42c1', 
+        '#adb5bd'  
+    ];
+
+    let hash = 0;
+    for (let i = 0; i < username.length; i++) {
+        hash = username.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Usa il modulo per scegliere un colore dalla lista
+    const index = Math.abs(hash % colors.length);
+    return colors[index];
+};
+
 function ChatPage({ user }) {
     const theme = useContext(ThemeContext);
 
@@ -24,11 +52,11 @@ function ChatPage({ user }) {
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [inviteUsername, setInviteUsername] = useState("");
     
-    // NUOVO: Stati per Lista Membri
+    // Stati per Lista Membri
     const [showMembersModal, setShowMembersModal] = useState(false);
     const [members, setMembers] = useState([]);
 
-    // NUOVO: Stati per Rinomina
+    // Stati per Rinomina
     const [showRenameModal, setShowRenameModal] = useState(false);
     const [renameValue, setRenameValue] = useState("");
 
@@ -55,10 +83,9 @@ function ChatPage({ user }) {
         // 1. Carica messaggi salvati
         API.getMessages(currentTeam.id).then(setMessages).catch(console.error);
         
-        // 2. Connessione WebSocket Dinamica (Supporto Android/LAN)
+        // 2. Connessione WebSocket Dinamica
         const { hostname, protocol } = window.location;
         const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
-        // Se siamo su porta 5173 (dev), il backend è su 3000. Altrimenti (prod) stessa porta.
         const wsPort = '3000'; 
         
         const ws = new WebSocket(`${wsProtocol}//${hostname}:${wsPort}/ws/team/${currentTeam.id}`);
@@ -112,7 +139,6 @@ function ChatPage({ user }) {
         catch (err) { console.error(err); alert("Impossibile uscire"); }
     };
 
-    // NUOVO: Gestione Visualizzazione Membri
     const handleShowMembers = async () => {
         if (!currentTeam) return;
         try {
@@ -125,22 +151,19 @@ function ChatPage({ user }) {
         }
     };
 
-    // NUOVO: Gestione Rinomina
     const handleRename = async () => {
         if (!currentTeam || !renameValue.trim()) return;
         try {
             await API.renameTeam(currentTeam.id, renameValue);
-            // Aggiorna UI locale immediatamente
             setCurrentTeam(prev => ({ ...prev, name: renameValue }));
             setShowRenameModal(false);
             setRenameValue("");
-            refreshAllData(); // Aggiorna lista laterale
+            refreshAllData(); 
         } catch (err) {
             alert(err.message);
         }
     };
 
-    // Formattazione Data
     const formatDateLabel = (d) => {
         const date = dayjs(d), today = dayjs(), yest = dayjs().subtract(1, 'day');
         if (date.isSame(today, 'day')) return "Oggi";
@@ -160,7 +183,6 @@ function ChatPage({ user }) {
                 {/* --- SIDEBAR SINISTRA --- */}
                 <Col md={3} lg={2} className={`border-end d-flex flex-column h-100 p-0 ${sidebarClass}`}>
                     
-                    {/* Lista Inviti */}
                     {invites.length > 0 && (
                         <div className="p-3 bg-warning bg-opacity-10 border-bottom border-warning">
                             <small className="fw-bold text-warning text-uppercase">Inviti ({invites.length})</small>
@@ -179,13 +201,11 @@ function ChatPage({ user }) {
                         </div>
                     )}
 
-                    {/* Header Gruppi */}
                     <div className="p-3 d-flex justify-content-between align-items-center">
                         <h6 className={`m-0 fw-bold ${theme === 'dark' ? 'text-light' : 'text-muted'}`}>GRUPPI</h6>
                         <Button variant="outline-primary" size="sm" onClick={() => setShowCreateModal(true)}><i className="bi bi-plus-lg"></i></Button>
                     </div>
                     
-                    {/* Lista Gruppi */}
                     <div className="flex-grow-1 overflow-auto">
                         <ListGroup variant="flush">
                             {teams.map(team => (
@@ -216,7 +236,7 @@ function ChatPage({ user }) {
                             {/* HEADER CHAT */}
                             <div className={`p-3 border-bottom d-flex justify-content-between align-items-center shadow-sm ${headerClass}`} style={{height: '70px'}}>
                                 
-                                {/* Nome Gruppo + Matita Rinomina */}
+                                {/* Nome Gruppo + Matita */}
                                 <h4 className="m-0 fw-bold d-flex align-items-center gap-2">
                                     <span><span className="text-primary opacity-50">#</span> {currentTeam.name}</span>
                                     <Button variant="link" className={`p-0 text-decoration-none ${theme === 'dark' ? 'text-secondary' : 'text-muted'}`} 
@@ -225,21 +245,36 @@ function ChatPage({ user }) {
                                     </Button>
                                 </h4>
 
-                                {/* Pulsanti Azione */}
+                                {/* PULSANTI AZIONE */}
                                 <div className="d-flex gap-2">
-                                    {/* Bottone Lista Membri */}
-                                    <Button variant="outline-info" className="d-flex align-items-center gap-2 shadow-sm px-3 fw-semibold" onClick={handleShowMembers}>
-                                        <i className="bi bi-people-fill fs-5"></i>
+                                    <Button 
+                                        variant="secondary" 
+                                        className="d-flex align-items-center justify-content-center shadow-sm border-0" 
+                                        style={{ width: '45px', height: '45px', backgroundColor: '#6c757d' }}
+                                        onClick={handleShowMembers}
+                                        title="Membri"
+                                    >
+                                        <i className="bi bi-people-fill fs-5 text-white"></i>
                                     </Button>
 
-                                    {/* Bottone Invita */}
-                                    <Button variant="primary" className="d-flex align-items-center gap-2 shadow-sm px-3 fw-semibold" onClick={() => setShowInviteModal(true)}>
-                                        <i className="bi bi-person-plus-fill fs-5"></i> <span className="d-none d-md-inline">Invita</span>
+                                    <Button 
+                                        variant="primary" 
+                                        className="d-flex align-items-center justify-content-center shadow-sm border-0" 
+                                        style={{ width: '45px', height: '45px', backgroundColor: '#0d6efd' }}
+                                        onClick={() => setShowInviteModal(true)}
+                                        title="Invita"
+                                    >
+                                        <i className="bi bi-person-plus-fill fs-5 text-white"></i>
                                     </Button>
 
-                                    {/* Bottone Abbandona */}
-                                    <Button variant="danger" className="d-flex align-items-center gap-2 shadow-sm px-3 fw-semibold" onClick={handleLeaveTeam}>
-                                        <i className="bi bi-door-open-fill fs-5"></i> <span className="d-none d-md-inline">Abbandona</span>
+                                    <Button 
+                                        variant="danger" 
+                                        className="d-flex align-items-center justify-content-center shadow-sm border-0" 
+                                        style={{ width: '45px', height: '45px', backgroundColor: '#dc3545' }}
+                                        onClick={handleLeaveTeam}
+                                        title="Abbandona"
+                                    >
+                                        <i className="bi bi-box-arrow-right fs-5 text-white"></i>
                                     </Button>
                                 </div>
                             </div>
@@ -257,6 +292,10 @@ function ChatPage({ user }) {
                                         const prevMsg = messages[idx - 1];
                                         const showDate = !prevMsg || msg.data !== prevMsg.data;
                                         const isMine = user && msg.username === user.username;
+                                        
+                                        // Calcolo colore utente
+                                        const userColor = getColorFromUsername(msg.username);
+                                        
                                         let bubbleClass = isMine ? "bg-success text-white" : (theme === 'dark' ? "bg-secondary text-white" : "bg-white text-dark");
 
                                         return (
@@ -270,7 +309,15 @@ function ChatPage({ user }) {
                                                     <div className={`p-2 px-3 rounded-3 shadow-sm border ${bubbleClass}`} 
                                                          style={{maxWidth: '75%', minWidth: '120px', position: 'relative', border: theme === 'dark' ? '1px solid #444' : ''}}>
                                                         
-                                                        {!isMine && <div className={`fw-bold small mb-1 ${theme === 'dark' ? 'text-info' : 'text-primary'}`}>{msg.username}</div>}
+                                                        {/* NOME UTENTE COLORATO */}
+                                                        {!isMine && (
+                                                            <div 
+                                                                className="fw-bold small mb-1" 
+                                                                style={{ color: userColor }}
+                                                            >
+                                                                {msg.username}
+                                                            </div>
+                                                        )}
                                                         
                                                         <div style={{paddingRight: '45px', wordWrap: 'break-word'}}>{msg.message}</div>
                                                         
@@ -320,14 +367,12 @@ function ChatPage({ user }) {
 
             {/* --- MODALI --- */}
 
-            {/* Crea Gruppo */}
             <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} centered>
                 <Modal.Header closeButton><Modal.Title>Nuovo Gruppo</Modal.Title></Modal.Header>
                 <Modal.Body><Form.Control type="text" placeholder="Nome..." value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} autoFocus /></Modal.Body>
                 <Modal.Footer><Button variant="primary" onClick={handleCreateTeam} disabled={!newTeamName.trim()}>Crea</Button></Modal.Footer>
             </Modal>
 
-            {/* Invita Utente */}
             <Modal show={showInviteModal} onHide={() => setShowInviteModal(false)} centered>
                 <Modal.Header closeButton><Modal.Title>Invita</Modal.Title></Modal.Header>
                 <Modal.Body><Form.Control type="text" placeholder="Username..." value={inviteUsername} onChange={(e) => setInviteUsername(e.target.value)} autoFocus /></Modal.Body>
@@ -343,7 +388,15 @@ function ChatPage({ user }) {
                     <ListGroup variant="flush">
                         {members.map((member, idx) => (
                             <ListGroup.Item key={idx} className="d-flex align-items-center gap-2">
-                                <div className="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center" style={{width: '30px', height: '30px'}}>
+                                {/* PALLINO COLORATO */}
+                                <div 
+                                    className="text-white rounded-circle d-flex justify-content-center align-items-center" 
+                                    style={{
+                                        width: '30px', 
+                                        height: '30px',
+                                        backgroundColor: getColorFromUsername(member.username) 
+                                    }}
+                                >
                                     {member.username.charAt(0).toUpperCase()}
                                 </div>
                                 {member.username}
@@ -354,7 +407,6 @@ function ChatPage({ user }) {
                 </Modal.Body>
             </Modal>
 
-            {/* Rinomina Gruppo */}
             <Modal show={showRenameModal} onHide={() => setShowRenameModal(false)} centered>
                 <Modal.Header closeButton><Modal.Title>Rinomina Gruppo</Modal.Title></Modal.Header>
                 <Modal.Body>

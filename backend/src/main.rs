@@ -141,7 +141,6 @@ fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>, chat
     .route("/messages", get(get_messages).route_layer(from_fn(auth))) 
     .route("/protected", get(protected).route_layer(from_fn(auth)))
     .route("/ws/team/{team_id}", get(websocket_handler).route_layer(from_fn(auth)))
-    // *** FIX QUI SOTTO: Ho cambiato :team_id in {team_id} ***
     .route("/team/{team_id}/members", get(get_team_members).route_layer(from_fn(auth)))
     
     .layer(AuthSessionLayer::<User, i64, SessionSqlitePool, SqlitePool>::new(Some(pool.clone())).with_config(config))
@@ -369,7 +368,7 @@ async fn invite(Extension(user): Extension<User>, State(pool): State<SqlitePool>
         return (StatusCode::BAD_REQUEST, "L'utente è già membro del gruppo").into_response();
     }
 
-    // 6. [FIX IMPORTANTE] Controllo se l'utente è GIÀ STATO INVITATO (Invito pendente)
+    // 6.Controllo se l'utente è GIÀ STATO INVITATO (Invito pendente)
     let pending_invite: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM invite WHERE id_user = ?1 AND id_team = ?2)")
         .bind(target_user_id).bind(team_id).fetch_one(&pool).await.unwrap_or(false);
 

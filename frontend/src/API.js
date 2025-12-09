@@ -33,7 +33,7 @@ async function handleResponse(response) {
     return true; 
 }
 
-/* AUTH & USER */
+// AUTH & USER
 const register = async (credentials) => {
     const response = await fetch(`${SERVER_URL}/register`, {
         method: 'POST',
@@ -70,13 +70,13 @@ const getUserInfo = async () => {
     return await handleResponse(response);
 }
 
-/* TEAMS & MESSAGES */
+// GRUPPI E MESSAGGI
 const getTeams = async () => {
     const response = await fetch(`${SERVER_URL}/list/teams`, { method: 'GET', credentials: 'include' });
     return await handleResponse(response);
 };
 
-// NUOVA FUNZIONE: LISTA MEMBRI
+// LISTA MEMBRI
 const getTeamMembers = async (teamId) => {
     const response = await fetch(`${SERVER_URL}/team/${teamId}/members`, { method: 'GET', credentials: 'include' });
     return await handleResponse(response);
@@ -127,7 +127,7 @@ const leaveTeam = async (teamId) => {
     return await handleResponse(response);
 };
 
-/* INVITES */
+// INVITI
 const inviteUser = async (username, teamId) => {
     const response = await fetch(`${SERVER_URL}/invite`, {
         method: 'POST',
@@ -168,7 +168,7 @@ const API = {
     register, logIn, logOut, getUserInfo,
     getTeams, getMessages, sendMessage, createTeam, renameTeam, leaveTeam,
     inviteUser, getInvites, acceptInvite, declineInvite,
-    getTeamMembers // Aggiunto export
+    getTeamMembers
 };
 
 export default API;
