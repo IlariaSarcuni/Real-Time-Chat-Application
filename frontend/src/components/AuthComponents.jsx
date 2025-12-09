@@ -42,10 +42,9 @@ function LoginForm(props) {
         <div className={theme}>
             <Row className="justify-content-center align-items-center min-vh-100">
                 <Col xs={12} sm={10} md={8} lg={5}>
-                    <Card className="login-card shadow-lg">
-                        <Card.Title>
-                            <h3>Login</h3>
-                            <p>Effettua il login per accedere a Ruggine</p>
+                    <Card className="auth-card">
+                        <Card.Title className="card-title">
+                            <h3>Accedi a Ruggine</h3>
                         </Card.Title>
                         <Card.Body className="pt-0">
                             <Form onSubmit={handleSubmit}>
@@ -60,11 +59,11 @@ function LoginForm(props) {
                                     <Form.Control type="password" placeholder="Inserisci la tua password" value={password}
                                         onChange={event => setPassword(event.target.value)} required={true} />
                                 </Form.Group>
-                                <Button type="submit" variant="success" disabled={loading} className="mt-3 login-button">
+                                <Button type="submit" size="lg" disabled={loading} className="mt-3 login-button">
                                     {loading ? 'Accesso in corso...' : 'Accedi'}
                                 </Button>
-                                <LineSeparator>or</LineSeparator>
-                                <Link className={`btn ${theme === "light" ? "btn-outline-secondary" : "btn-secondary"} registration-button`} to={"/register"}>Registrati</Link>
+                                <LineSeparator>oppure</LineSeparator>
+                                <Link className="btn btn-lg registration-button" to={"/register"}>Registrati</Link>
                             </Form>
                         </Card.Body>
                     </Card>

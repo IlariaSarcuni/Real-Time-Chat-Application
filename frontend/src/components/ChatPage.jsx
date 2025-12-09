@@ -1,284 +1,268 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Container, Row, Col, Form, Button, ListGroup, Modal, Badge, Alert } from 'react-bootstrap';
+import { useState, useEffect, useCallback, useRef, useContext } from 'react';
+import { Container, Row, Col, Form, Button, ListGroup, Modal, Alert, Badge, ButtonGroup } from 'react-bootstrap';
 import API from '../API';
+import dayjs from 'dayjs';
+import ThemeContext from '../ThemeContext';
 
-function ChatPage() {
-    // Dati
+function ChatPage({ user }) {
+    const theme = useContext(ThemeContext);
+
     const [teams, setTeams] = useState([]); 
-    const [invites, setInvites] = useState([]); // <--- Stato per gli inviti
+    const [invites, setInvites] = useState([]); 
     const [currentTeam, setCurrentTeam] = useState(null);
     const [messages, setMessages] = useState([]);
-    
-    // Input
     const [newMessage, setNewMessage] = useState("");
-    
-    // UI e Errori
     const [errorMsg, setErrorMsg] = useState("");
     
-    // Modali
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newTeamName, setNewTeamName] = useState("");
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [inviteUsername, setInviteUsername] = useState("");
+    const messagesEndRef = useRef(null);
 
-    // 1. Caricamento iniziale (Gruppi + Inviti)
+    const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); };
+
     const refreshAllData = useCallback(() => {
-        API.getTeams()
-            .then(ts => setTeams(ts))
-            .catch(err => console.error("Errore team:", err));
-
-        API.getInvites()
-            .then(inv => setInvites(inv))
-            .catch(err => console.error("Errore inviti:", err));
+        API.getTeams().then(ts => setTeams(Array.isArray(ts) ? ts : [])).catch(e => console.error(e));
+        API.getInvites().then(inv => setInvites(Array.isArray(inv) ? inv : [])).catch(e => console.error(e));
     }, []);
 
     useEffect(() => {
         refreshAllData();
+        const interval = setInterval(refreshAllData, 5000);
+        return () => clearInterval(interval);
     }, [refreshAllData]);
 
-    // 2. Polling messaggi (Ogni 2 sec) + Refresh inviti/gruppi (Ogni 5 sec)
     useEffect(() => {
-        // Polling Messaggi (solo se c'è un team selezionato)
-        let msgInterval = null;
-        if (currentTeam) {
-            const fetchMsgs = () => {
-                API.getMessages(currentTeam.name)
-                    .then(msgs => setMessages(msgs))
-                    .catch(err => console.error(err));
-            };
-            fetchMsgs(); // Chiamata immediata
-            msgInterval = setInterval(fetchMsgs, 2000);
-        }
-
-        // Polling background per nuovi inviti o gruppi (ogni 5 secondi)
-        const dataInterval = setInterval(() => {
-            refreshAllData();
-        }, 5000);
-
-        return () => {
-            if (msgInterval) clearInterval(msgInterval);
-            clearInterval(dataInterval);
+        if (!currentTeam) return;
+        API.getMessages(currentTeam.id).then(setMessages).catch(console.error);
+        
+        const ws = new WebSocket(`ws://localhost:3000/ws/team/${currentTeam.id}`);
+        ws.onmessage = (e) => {
+            try { setMessages(prev => [...prev, JSON.parse(e.data)]); } catch (err) { console.error(err); }
         };
-    }, [currentTeam, refreshAllData]);
+        return () => { if (ws.readyState === 1) ws.close(); };
+    }, [currentTeam]);
 
-    // --- HANDLERS ---
+    useEffect(() => scrollToBottom(), [messages]);
 
     const handleSend = async (e) => {
         e.preventDefault();
         if (!newMessage.trim() || !currentTeam) return;
         try {
-            await API.sendMessage(currentTeam.name, newMessage);
-            setNewMessage(""); 
-            // Aggiorna subito i messaggi senza aspettare il polling
-            const msgs = await API.getMessages(currentTeam.name);
-            setMessages(msgs);
-        } catch (err) {
-            setErrorMsg("Impossibile inviare il messaggio");
-            setTimeout(() => setErrorMsg(""), 3000);
-        }
+            await API.sendMessage(currentTeam.id, newMessage);
+            setNewMessage("");
+        } catch (err) { console.error(err); setErrorMsg("Errore invio"); setTimeout(() => setErrorMsg(""), 3000); }
     };
 
     const handleCreateTeam = async () => {
         try {
             await API.createTeam(newTeamName);
-            setShowCreateModal(false);
-            setNewTeamName("");
-            refreshAllData(); // Ricarica liste
-        } catch (err) {
-            alert("Errore creazione gruppo: " + err.message);
-        }
+            setShowCreateModal(false); setNewTeamName(""); refreshAllData();
+        } catch (err) { alert(err.message); }
     };
 
     const handleInvite = async () => {
         try {
-            await API.inviteUser(inviteUsername, currentTeam.name);
-            setShowInviteModal(false);
-            setInviteUsername("");
-            alert("Invito inviato con successo!");
-        } catch (err) {
-            alert("Errore invio invito: Utente non trovato o errore server.");
-        }
+            await API.inviteUser(inviteUsername, currentTeam.id);
+            setShowInviteModal(false); setInviteUsername(""); alert("Invito inviato");
+        } catch (err) { alert(err.message); }
     };
 
-    const handleAcceptInvite = async (teamName) => {
-        try {
-            await API.acceptInvite(teamName);
-            refreshAllData(); // Ricarica per spostare il team da inviti a lista gruppi
-        } catch (err) {
-            alert("Impossibile accettare l'invito.");
-        }
-    }
+    const handleAcceptInvite = async (teamId) => {
+        try { await API.acceptInvite(teamId); refreshAllData(); } catch (err) { console.error(err); alert("Impossibile accettare."); }
+    };
+
+    const handleDeclineInvite = async (teamId) => {
+        if (!window.confirm("Vuoi rifiutare questo invito?")) return;
+        try { await API.declineInvite(teamId); refreshAllData(); } catch (err) { console.error(err); alert("Impossibile rifiutare."); }
+    };
+
+    const handleLeaveTeam = async () => {
+        if (!currentTeam || !window.confirm("Sicuro di voler uscire?")) return;
+        try { await API.leaveTeam(currentTeam.id); setCurrentTeam(null); setMessages([]); refreshAllData(); } 
+        catch (err) { console.error(err); alert("Impossibile uscire"); }
+    };
+
+    const formatDateLabel = (d) => {
+        const date = dayjs(d), today = dayjs(), yest = dayjs().subtract(1, 'day');
+        if (date.isSame(today, 'day')) return "Oggi";
+        if (date.isSame(yest, 'day')) return "Ieri";
+        return date.format('DD/MM/YYYY');
+    };
+
+    // STILI DINAMICI
+    const chatBg = theme === 'dark' ? '#212529' : '#e5ddd5';
+    const sidebarClass = theme === 'dark' ? 'bg-black border-secondary' : 'bg-light';
+    const headerClass = theme === 'dark' ? 'bg-dark border-secondary text-white' : 'bg-white text-dark';
 
     return (
-        <Container fluid className="vh-100 d-flex flex-column p-0">
-            {/* Header semplificato integrato */}
-            <Row className="bg-primary text-white p-3 m-0 shadow-sm align-items-center">
-                <Col>
-                    <h4 className="m-0 fw-bold"><i className="bi bi-chat-square-quote-fill"></i> Ruggine Chat</h4>
-                </Col>
-            </Row>
-
+        <Container fluid className="d-flex flex-column p-0 h-100">
             <Row className="flex-grow-1 m-0" style={{overflow: 'hidden'}}>
-                {/* SIDEBAR SINISTRA */}
-                <Col md={3} lg={2} className="border-end bg-light d-flex flex-column h-100 p-0">
+                
+                {/* --- SIDEBAR SINISTRA --- */}
+                <Col md={3} lg={2} className={`border-end d-flex flex-column h-100 p-0 ${sidebarClass}`}>
                     
-                    {/* Sezione Inviti (Visibile solo se ce ne sono) */}
                     {invites.length > 0 && (
-                        <div className="p-3 bg-warning bg-opacity-25 border-bottom">
-                            <small className="text-uppercase fw-bold text-muted" style={{fontSize:'0.7rem'}}>Inviti in attesa</small>
-                            <ListGroup variant="flush" className="mt-2 bg-transparent">
+                        <div className="p-3 bg-warning bg-opacity-10 border-bottom border-warning">
+                            <small className="fw-bold text-warning text-uppercase">Inviti ({invites.length})</small>
+                            <ListGroup variant="flush" className="mt-2 gap-2">
                                 {invites.map(inv => (
-                                    <ListGroup.Item key={inv.id} className="d-flex justify-content-between align-items-center bg-white rounded mb-1 p-2 border shadow-sm">
-                                        <span className="fw-bold text-truncate" style={{maxWidth: '100px'}}>{inv.name}</span>
-                                        <Button size="sm" variant="success" onClick={() => handleAcceptInvite(inv.name)} title="Accetta">
-                                            <i className="bi bi-check-lg"></i>
-                                        </Button>
+                                    <ListGroup.Item key={inv.id} className="d-flex flex-column rounded border shadow-sm p-2" 
+                                        style={{backgroundColor: theme === 'dark' ? '#343a40' : '#fff', color: theme === 'dark' ? '#fff' : '#000'}}>
+                                        <div className="fw-bold mb-2 text-truncate w-100">{inv.name}</div>
+                                        <ButtonGroup size="sm" className="w-100">
+                                            <Button variant="outline-success" onClick={() => handleAcceptInvite(inv.id)}><i className="bi bi-check-lg"></i></Button>
+                                            <Button variant="outline-danger" onClick={() => handleDeclineInvite(inv.id)}><i className="bi bi-x-lg"></i></Button>
+                                        </ButtonGroup>
                                     </ListGroup.Item>
                                 ))}
                             </ListGroup>
                         </div>
                     )}
 
-                    {/* Sezione Gruppi */}
                     <div className="p-3 d-flex justify-content-between align-items-center">
-                        <h6 className="m-0 fw-bold text-uppercase text-muted">I tuoi Gruppi</h6>
-                        <Button variant="outline-primary" size="sm" onClick={() => setShowCreateModal(true)}>
-                            <i className="bi bi-plus-lg"></i>
-                        </Button>
+                        <h6 className={`m-0 fw-bold ${theme === 'dark' ? 'text-light' : 'text-muted'}`}>GRUPPI</h6>
+                        <Button variant="outline-primary" size="sm" onClick={() => setShowCreateModal(true)}><i className="bi bi-plus-lg"></i></Button>
                     </div>
                     
-                    <ListGroup variant="flush" className="flex-grow-1 overflow-auto">
-                        {teams.map(team => (
-                            <ListGroup.Item 
-                                key={team.id} 
-                                action 
-                                active={currentTeam && currentTeam.id === team.id}
-                                onClick={() => setCurrentTeam(team)}
-                                className="border-0 py-3"
-                            >
-                                <i className="bi bi-hash me-2 opacity-50"></i>
-                                {team.name}
-                            </ListGroup.Item>
-                        ))}
-                        {teams.length === 0 && <div className="text-center text-muted mt-4 small">Nessun gruppo attivo</div>}
-                    </ListGroup>
+                    <div className="flex-grow-1 overflow-auto">
+                        <ListGroup variant="flush">
+                            {teams.map(team => (
+                                <ListGroup.Item 
+                                    key={team.id} 
+                                    action 
+                                    active={currentTeam?.id === team.id} 
+                                    onClick={() => setCurrentTeam(team)} 
+                                    className="border-0 py-3"
+                                    style={{
+                                        backgroundColor: currentTeam?.id === team.id ? '' : 'transparent',
+                                        color: theme === 'dark' && currentTeam?.id !== team.id ? 'white' : ''
+                                    }}
+                                >
+                                    <i className="bi bi-hash opacity-50"></i> {team.name}
+                                </ListGroup.Item>
+                            ))}
+                        </ListGroup>
+                    </div>
                 </Col>
 
-                {/* AREA CHAT CENTRALE */}
-                <Col md={9} lg={10} className="d-flex flex-column p-0 h-100 bg-white position-relative">
-                    {errorMsg && (
-                        <Alert variant="danger" className="position-absolute w-100 start-0 top-0 m-0 rounded-0" style={{zIndex: 10}} onClose={() => setErrorMsg("")} dismissible>
-                            {errorMsg}
-                        </Alert>
-                    )}
-
+                {/* --- AREA CHAT CENTRALE --- */}
+                <Col md={9} lg={10} className="d-flex flex-column p-0 h-100 position-relative" style={{backgroundColor: chatBg}}>
+                    {errorMsg && <Alert variant="danger" className="position-absolute w-100 top-0 m-0 rounded-0" style={{zIndex: 10}} onClose={() => setErrorMsg("")} dismissible>{errorMsg}</Alert>}
+                    
                     {currentTeam ? (
                         <>
-                            {/* Header Chat */}
-                            <div className="p-3 border-bottom bg-white d-flex justify-content-between align-items-center shadow-sm" style={{height: '60px'}}>
-                                <h5 className="m-0 fw-bold">
-                                    <span className="text-muted">#</span> {currentTeam.name}
-                                </h5>
-                                <Button variant="outline-secondary" size="sm" onClick={() => setShowInviteModal(true)}>
-                                    <i className="bi bi-person-plus-fill me-1"></i> Invita
-                                </Button>
+                            {/* Header */}
+                            <div className={`p-3 border-bottom d-flex justify-content-between align-items-center shadow-sm ${headerClass}`} style={{height: '70px'}}>
+                                <h4 className="m-0 fw-bold">
+                                    <span className="text-primary opacity-50">#</span> {currentTeam.name}
+                                </h4>
+                                <div className="d-flex gap-2">
+                                    <Button variant="primary" className="d-flex align-items-center gap-2 shadow-sm px-3 fw-semibold" onClick={() => setShowInviteModal(true)}>
+                                        <i className="bi bi-person-plus-fill fs-5"></i> <span className="d-none d-md-inline">Invita</span>
+                                    </Button>
+                                    <Button variant="danger" className="d-flex align-items-center gap-2 shadow-sm px-3 fw-semibold" onClick={handleLeaveTeam}>
+                                        <i className="bi bi-door-open-fill fs-5"></i> <span className="d-none d-md-inline">Abbandona</span>
+                                    </Button>
+                                </div>
                             </div>
 
-                            {/* Lista Messaggi */}
-                            <div className="flex-grow-1 p-4" style={{overflowY: 'auto', background: '#f0f2f5'}}>
-                                {messages.length === 0 && (
-                                    <div className="text-center text-muted mt-5">
-                                        <i className="bi bi-chat-dots display-4"></i>
-                                        <p className="mt-2">Nessun messaggio qui. Scrivi il primo!</p>
+                            {/* --- CONTENITORE PRINCIPALE (con 2 strati sovrapposti) --- */}
+                            <div className="flex-grow-1 position-relative">
+                                
+                                {/* STRATO 1: SFONDO FISSO (GRANCHIO) */}
+                                <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style={{ zIndex: 0, pointerEvents: 'none' }}>
+                                    <div style={{ 
+                                        fontSize: '15rem', 
+                                        opacity: '0.1', 
+                                        filter: theme === 'dark' ? 'invert(1)' : 'grayscale(100%)' 
+                                    }}>
+                                        🦀
                                     </div>
-                                )}
-                                {messages.map((msg, idx) => (
-                                    <div key={idx} className="mb-3 d-flex flex-column">
-                                        <div className="bg-white p-3 rounded-3 shadow-sm border" style={{maxWidth: '85%', width: 'fit-content'}}>
-                                            <div className="d-flex justify-content-between align-items-baseline mb-1 gap-3">
-                                                <span className="fw-bold text-primary small">{msg.username}</span>
-                                                <span className="text-muted small" style={{fontSize: '0.7rem'}}>{msg.ora}</span>
+                                </div>
+
+                                {/* STRATO 2: MESSAGGI SCROLLABILI */}
+                                <div className="position-absolute top-0 start-0 w-100 h-100 p-4" style={{ overflowY: 'auto', zIndex: 1 }}>
+                                    
+                                    {messages.map((msg, idx) => {
+                                        const prevMsg = messages[idx - 1];
+                                        const showDate = !prevMsg || msg.data !== prevMsg.data;
+                                        const isMine = user && msg.username === user.username;
+
+                                        let bubbleClass = isMine ? "bg-success text-white" : (theme === 'dark' ? "bg-secondary text-white" : "bg-white text-dark");
+
+                                        return (
+                                            <div key={idx} className="d-flex flex-column">
+                                                {showDate && (
+                                                    <div className="d-flex justify-content-center my-3">
+                                                        <Badge bg={theme === 'dark' ? 'dark' : 'secondary'} className="opacity-75 fw-normal px-3 py-1 rounded-pill border">{formatDateLabel(msg.data)}</Badge>
+                                                    </div>
+                                                )}
+                                                <div className={`mb-2 d-flex flex-column ${isMine ? 'align-items-end' : 'align-items-start'}`}>
+                                                    <div className={`p-2 px-3 rounded-3 shadow-sm border ${bubbleClass}`} 
+                                                         style={{maxWidth: '75%', minWidth: '120px', position: 'relative', border: theme === 'dark' ? '1px solid #444' : ''}}>
+                                                        
+                                                        {!isMine && <div className={`fw-bold small mb-1 ${theme === 'dark' ? 'text-info' : 'text-primary'}`}>{msg.username}</div>}
+                                                        
+                                                        <div style={{paddingRight: '45px', wordWrap: 'break-word'}}>{msg.message}</div>
+                                                        
+                                                        <div className={`small position-absolute bottom-0 end-0 pe-2 pb-1 ${isMine || theme === 'dark' ? 'text-light opacity-75' : 'text-muted'}`} style={{fontSize: '0.65rem'}}>
+                                                            {msg.ora?.substring(0, 5)}
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="text-break">{msg.message}</div>
-                                        </div>
-                                    </div>
-                                ))}
+                                        );
+                                    })}
+                                    <div ref={messagesEndRef} />
+                                </div>
                             </div>
 
-                            {/* Input Area */}
-                            <div className="p-3 bg-light border-top">
+                            {/* Input */}
+                            <div className={`p-3 border-top ${theme === 'dark' ? 'bg-dark border-secondary' : 'bg-light'}`}>
                                 <Form onSubmit={handleSend}>
                                     <Row className="g-2">
                                         <Col>
                                             <Form.Control 
                                                 type="text" 
-                                                placeholder={`Scrivi in #${currentTeam.name}...`} 
-                                                value={newMessage}
-                                                onChange={(e) => setNewMessage(e.target.value)}
-                                                autoComplete="off"
+                                                placeholder="Scrivi..." 
+                                                value={newMessage} 
+                                                onChange={(e) => setNewMessage(e.target.value)} 
                                                 className="rounded-pill py-2 px-3"
+                                                style={{
+                                                    backgroundColor: theme === 'dark' ? '#343a40' : '#fff',
+                                                    color: theme === 'dark' ? '#fff' : '#000',
+                                                    border: theme === 'dark' ? '1px solid #555' : ''
+                                                }}
                                             />
                                         </Col>
-                                        <Col xs="auto">
-                                            <Button type="submit" variant="primary" className="rounded-circle p-2 px-3" disabled={!newMessage.trim()}>
-                                                <i className="bi bi-send-fill"></i>
-                                            </Button>
-                                        </Col>
+                                        <Col xs="auto"><Button type="submit" variant="primary" className="rounded-circle p-2 px-3"><i className="bi bi-send-fill"></i></Button></Col>
                                     </Row>
                                 </Form>
                             </div>
                         </>
                     ) : (
-                        <div className="h-100 d-flex flex-column align-items-center justify-content-center text-muted bg-light">
+                        <div className={`h-100 d-flex flex-column align-items-center justify-content-center ${theme === 'dark' ? 'text-light' : 'text-muted'}`}>
                             <div className="display-1 opacity-25 mb-3">🦀</div>
                             <h4>Benvenuto su Ruggine Chat</h4>
-                            <p>Seleziona un gruppo a sinistra per iniziare a messaggiare.</p>
+                            <p>Seleziona un gruppo.</p>
                         </div>
                     )}
                 </Col>
             </Row>
 
-            {/* --- MODALI --- */}
-            
-            {/* Crea Gruppo */}
+            {/* Modali */}
             <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} centered>
-                <Modal.Header closeButton className="border-0 pb-0">
-                    <Modal.Title>Nuovo Gruppo</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <Form.Control 
-                        type="text" 
-                        placeholder="Nome del gruppo..." 
-                        value={newTeamName} 
-                        onChange={(e) => setNewTeamName(e.target.value)} 
-                        autoFocus
-                    />
-                </Modal.Body>
-                <Modal.Footer className="border-0 pt-0">
-                    <Button variant="link" className="text-decoration-none text-secondary" onClick={() => setShowCreateModal(false)}>Annulla</Button>
-                    <Button variant="primary" onClick={handleCreateTeam} disabled={!newTeamName.trim()}>Crea</Button>
-                </Modal.Footer>
+                <Modal.Header closeButton><Modal.Title>Nuovo Gruppo</Modal.Title></Modal.Header>
+                <Modal.Body><Form.Control type="text" placeholder="Nome..." value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} autoFocus /></Modal.Body>
+                <Modal.Footer><Button variant="primary" onClick={handleCreateTeam} disabled={!newTeamName.trim()}>Crea</Button></Modal.Footer>
             </Modal>
 
-            {/* Invita Utente */}
             <Modal show={showInviteModal} onHide={() => setShowInviteModal(false)} centered>
-                <Modal.Header closeButton className="border-0 pb-0">
-                    <Modal.Title>Invita Persona</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <p className="text-muted small">Stai invitando in: <strong>{currentTeam?.name}</strong></p>
-                    <Form.Control 
-                        type="text" 
-                        placeholder="Username esatto..."
-                        value={inviteUsername} 
-                        onChange={(e) => setInviteUsername(e.target.value)} 
-                        autoFocus
-                    />
-                </Modal.Body>
-                <Modal.Footer className="border-0 pt-0">
-                    <Button variant="link" className="text-decoration-none text-secondary" onClick={() => setShowInviteModal(false)}>Annulla</Button>
-                    <Button variant="success" onClick={handleInvite} disabled={!inviteUsername.trim()}>Invia Invito</Button>
-                </Modal.Footer>
+                <Modal.Header closeButton><Modal.Title>Invita</Modal.Title></Modal.Header>
+                <Modal.Body><Form.Control type="text" placeholder="Username..." value={inviteUsername} onChange={(e) => setInviteUsername(e.target.value)} autoFocus /></Modal.Body>
+                <Modal.Footer><Button variant="success" onClick={handleInvite} disabled={!inviteUsername.trim()}>Invia</Button></Modal.Footer>
             </Modal>
         </Container>
     );

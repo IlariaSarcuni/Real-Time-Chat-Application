@@ -2,8 +2,8 @@
 
 /* *** Light and Dark Mode *** */
 nav {
-    background-color: #1C1C2B;
-    border-bottom: 1px solid #002F5F;
+    background-color: #1A1A1A;
+    border-bottom: 1px solid #444444;
     box-shadow: 0px 1px 10px rgba(0, 0, 0, 0.2);
 }
 
@@ -21,4 +21,9 @@ nav button i {
     color: #FFFFFF;
     font-size: 0.9rem;
     font-weight: bold;
+}
+
+.navbar .btn-outline-light i.bi {
+    /* 'inherit' garantisce che l'icona prenda il colore definito dal genitore */
+    color: inherit !important; 
 }

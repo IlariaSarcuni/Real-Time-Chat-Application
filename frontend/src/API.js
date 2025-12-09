@@ -1,88 +1,87 @@
 const SERVER_URL = 'http://localhost:3000';
 
-/* Registra un nuovo utente */
-const register = async (credentials) => {
-    try {
-        const response = await fetch(`${SERVER_URL}/register`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(credentials)
-        });
-        
-        // Se la registrazione fallisce (es. username già preso), lanciamo errore
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(errText || "Errore registrazione");
+async function handleResponse(response) {
+    if (!response.ok) {
+        try {
+            const errPayload = await response.text();
+            try {
+                const errJson = JSON.parse(errPayload);
+                if (errJson.error) throw new Error(errJson.error);
+                if (errJson.message) throw new Error(errJson.message);
+            } catch { 
+                if (errPayload) throw new Error(errPayload);
+            }
+        } catch (e) {
+            if (e.message) throw e;
         }
-        
-        return true;
-    } catch (error) {
-        throw error;
+        throw new Error(response.statusText || "Errore di connessione");
     }
+    
+    const type = response.headers.get('Content-Type');
+    if (type && type.includes('application/json')) {
+        return await response.json();
+    }
+    return true; 
+}
+
+/* AUTH & USER */
+const register = async (credentials) => {
+    const response = await fetch(`${SERVER_URL}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials)
+    });
+    return await handleResponse(response);
 };
 
-/* This function executes the login. It wants username and password in a 'credentials' object */
 const logIn = async (credentials) => {
     try {
         const response = await fetch(`${SERVER_URL}/login`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include', // this parameter specifies that authentication cookie must be forwared.
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include', 
             body: JSON.stringify(credentials)
         });
-        const validResponse = handleInvalidResponse(response);
-        var j=await response.json();
-        console.log(j);
-        return response;
+        return await handleResponse(response);
     } catch (error) {
-        console.error('Login error: ', error);
+        console.error('Login error: ', error); 
         throw error;
     }
 };
 
-/* Recupera la lista dei gruppi a cui l'utente appartiene */
+const logOut = async () => {
+    await fetch(`${SERVER_URL}/logout`, { 
+        method: 'GET', 
+        credentials: 'include' 
+    });
+};
+
+const getUserInfo = async () => {
+    const response = await fetch(`${SERVER_URL}/me`, { method: 'GET', credentials: 'include' });
+    return await handleResponse(response);
+}
+
+/* TEAMS & MESSAGES */
 const getTeams = async () => {
-    const response = await fetch(`${SERVER_URL}/list/teams`, {
-        method: 'GET',
-        credentials: 'include',
-    });
-    if (response.ok) {
-        return await response.json();
-    } else {
-        throw new Error("Errore durante il caricamento della lista gruppi");
-    }
+    const response = await fetch(`${SERVER_URL}/list/teams`, { method: 'GET', credentials: 'include' });
+    return await handleResponse(response);
 };
 
-/* Recupera i messaggi di un gruppo specifico */
-const getMessages = async (teamName) => {
-    const response = await fetch(`${SERVER_URL}/messages?teamname=${teamName}`, {
-        method: 'GET',
-        credentials: 'include',
-    });
-    if (response.ok) {
-        return await response.json();
-    } else {
-        throw new Error("Errore durante il recupero dei messaggi");
-    }
+const getMessages = async (teamId) => {
+    const response = await fetch(`${SERVER_URL}/messages?team_id=${teamId}`, { method: 'GET', credentials: 'include' });
+    return await handleResponse(response);
 };
 
-/* Invia un nuovo messaggio */
-const sendMessage = async (teamName, message) => {
+const sendMessage = async (teamId, message) => {
     const response = await fetch(`${SERVER_URL}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ teamname: teamName, message: message })
+        body: JSON.stringify({ team_id: teamId, message: message })
     });
-    if (!response.ok) throw new Error("Errore invio messaggio");
-    return true;
+    return await handleResponse(response);
 };
 
-/* Crea un nuovo gruppo */
 const createTeam = async (name) => {
     const response = await fetch(`${SERVER_URL}/create`, {
         method: 'POST',
@@ -90,66 +89,60 @@ const createTeam = async (name) => {
         credentials: 'include',
         body: JSON.stringify({ name: name })
     });
-    if (!response.ok) throw new Error("Errore creazione gruppo");
-    return await response.json();
+    return await handleResponse(response);
 };
 
-/* Invita un utente in un gruppo */
-const inviteUser = async (username, teamname) => {
+const leaveTeam = async (teamId) => {
+    const response = await fetch(`${SERVER_URL}/leave`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ team_id: teamId })
+    });
+    return await handleResponse(response);
+};
+
+/* INVITES */
+const inviteUser = async (username, teamId) => {
     const response = await fetch(`${SERVER_URL}/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username, teamname })
+        body: JSON.stringify({ username, team_id: teamId })
     });
-    if (!response.ok) throw new Error("Errore nell'invito (Utente non trovato o permesso negato)");
-    return true;
+    return await handleResponse(response);
 };
 
-/* Helper per gestire errori comuni delle fetch */
-function handleInvalidResponse(response) {
-    if (!response.ok) { throw Error(response.statusText) }
-    let type = response.headers.get('Content-Type');
-    if (type !== null && type.indexOf('application/json') === -1){
-        throw new TypeError(`Expected JSON, got ${type}`)
-    }
-    return response;
-}
-
-/* Recupera gli inviti pendenti */
 const getInvites = async () => {
-    const response = await fetch(`${SERVER_URL}/list/invites`, {
-        method: 'GET',
-        credentials: 'include',
-    });
+    const response = await fetch(`${SERVER_URL}/list/invites`, { method: 'GET', credentials: 'include' });
     if (response.ok) return await response.json();
-    // Se ritorna lista vuota o errore gestito, ritorna array vuoto
     return []; 
 };
 
-/* Accetta un invito */
-const acceptInvite = async (teamName) => {
+const acceptInvite = async (teamId) => {
     const response = await fetch(`${SERVER_URL}/accept`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ teamname: teamName })
+        body: JSON.stringify({ team_id: teamId })
     });
-    if (!response.ok) throw new Error("Errore accettazione invito");
-    return await response.json();
+    return await handleResponse(response);
 };
 
+const declineInvite = async (teamId) => {
+    const response = await fetch(`${SERVER_URL}/decline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ team_id: teamId })
+    });
+    return await handleResponse(response);
+};
 
 const API = { 
-    register,
-    logIn, 
-    getTeams, 
-    getMessages, 
-    sendMessage, 
-    createTeam, 
-    inviteUser,
-    getInvites,  
-    acceptInvite   
+    register, logIn, logOut, getUserInfo,
+    getTeams, getMessages, sendMessage, createTeam, leaveTeam,
+    inviteUser, getInvites, acceptInvite, declineInvite
 };
 
 export default API;
