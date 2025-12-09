@@ -7,25 +7,36 @@ import ThemeContext from '../ThemeContext';
 function ChatPage({ user }) {
     const theme = useContext(ThemeContext);
 
+    // Stati Dati
     const [teams, setTeams] = useState([]); 
     const [invites, setInvites] = useState([]); 
     const [currentTeam, setCurrentTeam] = useState(null);
     const [messages, setMessages] = useState([]);
+    
+    // Stati Input
     const [newMessage, setNewMessage] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
     
-    // NUOVI STATI PER LISTA MEMBRI
+    // Stati Modali
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [newTeamName, setNewTeamName] = useState("");
+    
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [inviteUsername, setInviteUsername] = useState("");
+    
+    // NUOVO: Stati per Lista Membri
     const [showMembersModal, setShowMembersModal] = useState(false);
     const [members, setMembers] = useState([]);
 
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [newTeamName, setNewTeamName] = useState("");
-    const [showInviteModal, setShowInviteModal] = useState(false);
-    const [inviteUsername, setInviteUsername] = useState("");
+    // NUOVO: Stati per Rinomina
+    const [showRenameModal, setShowRenameModal] = useState(false);
+    const [renameValue, setRenameValue] = useState("");
+
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); };
 
+    // Caricamento Dati (Polling)
     const refreshAllData = useCallback(() => {
         API.getTeams().then(ts => setTeams(Array.isArray(ts) ? ts : [])).catch(e => console.error(e));
         API.getInvites().then(inv => setInvites(Array.isArray(inv) ? inv : [])).catch(e => console.error(e));
@@ -37,22 +48,31 @@ function ChatPage({ user }) {
         return () => clearInterval(interval);
     }, [refreshAllData]);
 
+    // Gestione Selezione Team e WebSocket
     useEffect(() => {
         if (!currentTeam) return;
+        
+        // 1. Carica messaggi salvati
         API.getMessages(currentTeam.id).then(setMessages).catch(console.error);
         
-        // WebSocket Dinamico (supporta IP locale per Android)
+        // 2. Connessione WebSocket Dinamica (Supporto Android/LAN)
         const { hostname, protocol } = window.location;
         const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
-        const ws = new WebSocket(`${wsProtocol}//${hostname}:3000/ws/team/${currentTeam.id}`);
+        // Se siamo su porta 5173 (dev), il backend è su 3000. Altrimenti (prod) stessa porta.
+        const wsPort = '3000'; 
+        
+        const ws = new WebSocket(`${wsProtocol}//${hostname}:${wsPort}/ws/team/${currentTeam.id}`);
         
         ws.onmessage = (e) => {
             try { setMessages(prev => [...prev, JSON.parse(e.data)]); } catch (err) { console.error(err); }
         };
+        
         return () => { if (ws.readyState === 1) ws.close(); };
     }, [currentTeam]);
 
     useEffect(() => scrollToBottom(), [messages]);
+
+    // --- HANDLERS ---
 
     const handleSend = async (e) => {
         e.preventDefault();
@@ -77,19 +97,6 @@ function ChatPage({ user }) {
         } catch (err) { alert(err.message); }
     };
 
-    // FUNZIONE PER APRIRE LISTA MEMBRI
-    const handleShowMembers = async () => {
-        if (!currentTeam) return;
-        try {
-            const list = await API.getTeamMembers(currentTeam.id);
-            setMembers(list);
-            setShowMembersModal(true);
-        } catch (err) {
-            console.error(err);
-            alert("Impossibile recuperare i membri");
-        }
-    };
-
     const handleAcceptInvite = async (teamId) => {
         try { await API.acceptInvite(teamId); refreshAllData(); } catch (err) { console.error(err); alert("Impossibile accettare."); }
     };
@@ -105,6 +112,35 @@ function ChatPage({ user }) {
         catch (err) { console.error(err); alert("Impossibile uscire"); }
     };
 
+    // NUOVO: Gestione Visualizzazione Membri
+    const handleShowMembers = async () => {
+        if (!currentTeam) return;
+        try {
+            const list = await API.getTeamMembers(currentTeam.id);
+            setMembers(list);
+            setShowMembersModal(true);
+        } catch (err) {
+            console.error(err);
+            alert("Impossibile recuperare i membri");
+        }
+    };
+
+    // NUOVO: Gestione Rinomina
+    const handleRename = async () => {
+        if (!currentTeam || !renameValue.trim()) return;
+        try {
+            await API.renameTeam(currentTeam.id, renameValue);
+            // Aggiorna UI locale immediatamente
+            setCurrentTeam(prev => ({ ...prev, name: renameValue }));
+            setShowRenameModal(false);
+            setRenameValue("");
+            refreshAllData(); // Aggiorna lista laterale
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    // Formattazione Data
     const formatDateLabel = (d) => {
         const date = dayjs(d), today = dayjs(), yest = dayjs().subtract(1, 'day');
         if (date.isSame(today, 'day')) return "Oggi";
@@ -112,7 +148,7 @@ function ChatPage({ user }) {
         return date.format('DD/MM/YYYY');
     };
 
-    // STILI DINAMICI
+    // Stili Dinamici
     const chatBg = theme === 'dark' ? '#212529' : '#e5ddd5';
     const sidebarClass = theme === 'dark' ? 'bg-black border-secondary' : 'bg-light';
     const headerClass = theme === 'dark' ? 'bg-dark border-secondary text-white' : 'bg-white text-dark';
@@ -124,6 +160,7 @@ function ChatPage({ user }) {
                 {/* --- SIDEBAR SINISTRA --- */}
                 <Col md={3} lg={2} className={`border-end d-flex flex-column h-100 p-0 ${sidebarClass}`}>
                     
+                    {/* Lista Inviti */}
                     {invites.length > 0 && (
                         <div className="p-3 bg-warning bg-opacity-10 border-bottom border-warning">
                             <small className="fw-bold text-warning text-uppercase">Inviti ({invites.length})</small>
@@ -142,11 +179,13 @@ function ChatPage({ user }) {
                         </div>
                     )}
 
+                    {/* Header Gruppi */}
                     <div className="p-3 d-flex justify-content-between align-items-center">
                         <h6 className={`m-0 fw-bold ${theme === 'dark' ? 'text-light' : 'text-muted'}`}>GRUPPI</h6>
                         <Button variant="outline-primary" size="sm" onClick={() => setShowCreateModal(true)}><i className="bi bi-plus-lg"></i></Button>
                     </div>
                     
+                    {/* Lista Gruppi */}
                     <div className="flex-grow-1 overflow-auto">
                         <ListGroup variant="flush">
                             {teams.map(team => (
@@ -174,48 +213,50 @@ function ChatPage({ user }) {
                     
                     {currentTeam ? (
                         <>
-                            {/* Header */}
+                            {/* HEADER CHAT */}
                             <div className={`p-3 border-bottom d-flex justify-content-between align-items-center shadow-sm ${headerClass}`} style={{height: '70px'}}>
-                                <h4 className="m-0 fw-bold">
-                                    <span className="text-primary opacity-50">#</span> {currentTeam.name}
+                                
+                                {/* Nome Gruppo + Matita Rinomina */}
+                                <h4 className="m-0 fw-bold d-flex align-items-center gap-2">
+                                    <span><span className="text-primary opacity-50">#</span> {currentTeam.name}</span>
+                                    <Button variant="link" className={`p-0 text-decoration-none ${theme === 'dark' ? 'text-secondary' : 'text-muted'}`} 
+                                        onClick={() => { setRenameValue(currentTeam.name); setShowRenameModal(true); }}>
+                                        <i className="bi bi-pencil-square fs-6"></i>
+                                    </Button>
                                 </h4>
+
+                                {/* Pulsanti Azione */}
                                 <div className="d-flex gap-2">
-                                    {/* BOTTONE LISTA MEMBRI */}
+                                    {/* Bottone Lista Membri */}
                                     <Button variant="outline-info" className="d-flex align-items-center gap-2 shadow-sm px-3 fw-semibold" onClick={handleShowMembers}>
                                         <i className="bi bi-people-fill fs-5"></i>
                                     </Button>
 
+                                    {/* Bottone Invita */}
                                     <Button variant="primary" className="d-flex align-items-center gap-2 shadow-sm px-3 fw-semibold" onClick={() => setShowInviteModal(true)}>
                                         <i className="bi bi-person-plus-fill fs-5"></i> <span className="d-none d-md-inline">Invita</span>
                                     </Button>
+
+                                    {/* Bottone Abbandona */}
                                     <Button variant="danger" className="d-flex align-items-center gap-2 shadow-sm px-3 fw-semibold" onClick={handleLeaveTeam}>
                                         <i className="bi bi-door-open-fill fs-5"></i> <span className="d-none d-md-inline">Abbandona</span>
                                     </Button>
                                 </div>
                             </div>
 
-                            {/* --- CONTENITORE PRINCIPALE (con 2 strati sovrapposti) --- */}
+                            {/* MESSAGGI */}
                             <div className="flex-grow-1 position-relative">
-                                
-                                {/* STRATO 1: SFONDO FISSO (GRANCHIO) */}
+                                {/* Sfondo */}
                                 <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style={{ zIndex: 0, pointerEvents: 'none' }}>
-                                    <div style={{ 
-                                        fontSize: '15rem', 
-                                        opacity: '0.1', 
-                                        filter: theme === 'dark' ? 'invert(1)' : 'grayscale(100%)' 
-                                    }}>
-                                        🦀
-                                    </div>
+                                    <div style={{ fontSize: '15rem', opacity: '0.1', filter: theme === 'dark' ? 'invert(1)' : 'grayscale(100%)' }}>🦀</div>
                                 </div>
 
-                                {/* STRATO 2: MESSAGGI SCROLLABILI */}
+                                {/* Lista Scrollabile */}
                                 <div className="position-absolute top-0 start-0 w-100 h-100 p-4" style={{ overflowY: 'auto', zIndex: 1 }}>
-                                    
                                     {messages.map((msg, idx) => {
                                         const prevMsg = messages[idx - 1];
                                         const showDate = !prevMsg || msg.data !== prevMsg.data;
                                         const isMine = user && msg.username === user.username;
-
                                         let bubbleClass = isMine ? "bg-success text-white" : (theme === 'dark' ? "bg-secondary text-white" : "bg-white text-dark");
 
                                         return (
@@ -245,7 +286,7 @@ function ChatPage({ user }) {
                                 </div>
                             </div>
 
-                            {/* Input */}
+                            {/* INPUT TEXT */}
                             <div className={`p-3 border-top ${theme === 'dark' ? 'bg-dark border-secondary' : 'bg-light'}`}>
                                 <Form onSubmit={handleSend}>
                                     <Row className="g-2">
@@ -277,20 +318,23 @@ function ChatPage({ user }) {
                 </Col>
             </Row>
 
-            {/* Modali */}
+            {/* --- MODALI --- */}
+
+            {/* Crea Gruppo */}
             <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} centered>
                 <Modal.Header closeButton><Modal.Title>Nuovo Gruppo</Modal.Title></Modal.Header>
                 <Modal.Body><Form.Control type="text" placeholder="Nome..." value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} autoFocus /></Modal.Body>
                 <Modal.Footer><Button variant="primary" onClick={handleCreateTeam} disabled={!newTeamName.trim()}>Crea</Button></Modal.Footer>
             </Modal>
 
+            {/* Invita Utente */}
             <Modal show={showInviteModal} onHide={() => setShowInviteModal(false)} centered>
                 <Modal.Header closeButton><Modal.Title>Invita</Modal.Title></Modal.Header>
                 <Modal.Body><Form.Control type="text" placeholder="Username..." value={inviteUsername} onChange={(e) => setInviteUsername(e.target.value)} autoFocus /></Modal.Body>
                 <Modal.Footer><Button variant="success" onClick={handleInvite} disabled={!inviteUsername.trim()}>Invia</Button></Modal.Footer>
             </Modal>
             
-            {/* NUOVO MODALE LISTA MEMBRI */}
+            {/* Lista Membri */}
             <Modal show={showMembersModal} onHide={() => setShowMembersModal(false)} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>Membri del Gruppo</Modal.Title>
@@ -309,6 +353,24 @@ function ChatPage({ user }) {
                     </ListGroup>
                 </Modal.Body>
             </Modal>
+
+            {/* Rinomina Gruppo */}
+            <Modal show={showRenameModal} onHide={() => setShowRenameModal(false)} centered>
+                <Modal.Header closeButton><Modal.Title>Rinomina Gruppo</Modal.Title></Modal.Header>
+                <Modal.Body>
+                    <Form.Control 
+                        type="text" 
+                        placeholder="Nuovo nome..." 
+                        value={renameValue} 
+                        onChange={(e) => setRenameValue(e.target.value)} 
+                        autoFocus 
+                    />
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="primary" onClick={handleRename} disabled={!renameValue.trim()}>Salva</Button>
+                </Modal.Footer>
+            </Modal>
+
         </Container>
     );
 }

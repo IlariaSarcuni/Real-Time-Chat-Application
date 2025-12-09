@@ -107,6 +107,16 @@ const createTeam = async (name) => {
     return await handleResponse(response);
 };
 
+const renameTeam = async (teamId, newName) => {
+    const response = await fetch(`${SERVER_URL}/rename`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ team_id: teamId, new_name: newName })
+    });
+    return await handleResponse(response);
+};
+
 const leaveTeam = async (teamId) => {
     const response = await fetch(`${SERVER_URL}/leave`, {
         method: 'POST',
@@ -156,7 +166,7 @@ const declineInvite = async (teamId) => {
 
 const API = { 
     register, logIn, logOut, getUserInfo,
-    getTeams, getMessages, sendMessage, createTeam, leaveTeam,
+    getTeams, getMessages, sendMessage, createTeam, renameTeam, leaveTeam,
     inviteUser, getInvites, acceptInvite, declineInvite,
     getTeamMembers // Aggiunto export
 };

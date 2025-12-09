@@ -130,6 +130,7 @@ fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>, chat
     .route("/logout", get(log_out))
     .route("/me", get(get_me).route_layer(from_fn(auth))) 
     .route("/list/teams",get(get_teams).route_layer(from_fn(auth)))
+    .route("/rename", post(rename_team).route_layer(from_fn(auth)))
     .route("/list/invites",get(get_list_invites).route_layer(from_fn(auth)))
     .route("/create",post(create_team).route_layer(from_fn(auth)))
     .route("/invite",post(invite).route_layer(from_fn(auth)))
@@ -196,6 +197,33 @@ async fn get_list_invites(Extension(user): Extension<User>,State(pool): State<Sq
 async fn get_teams(Extension(user): Extension<User>,State(pool): State<SqlitePool>) -> impl IntoResponse {
   let rows: Vec<Team> = sqlx::query_as(r#"SELECT t.id, t.name FROM team t INNER JOIN user_team ut ON ut.id_team = t.id WHERE ut.id_user = ?1"#).bind(user.id).fetch_all(&pool).await.unwrap();
   (StatusCode::OK, Json(rows))
+}
+
+async fn rename_team(Extension(user): Extension<User>, State(pool): State<SqlitePool>, Json(body): Json<Value>) -> impl IntoResponse {
+    let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
+    let new_name = body.get("new_name").and_then(|v| v.as_str()).unwrap_or("");
+
+    // 1. Validazione
+    if team_id == 0 || new_name.trim().is_empty() { 
+        return (StatusCode::BAD_REQUEST, "Dati non validi").into_response(); 
+    }
+
+    // 2. Sicurezza: Chi rinomina deve far parte del gruppo
+    let in_team: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user_team WHERE id_user = ?1 AND id_team = ?2)")
+        .bind(user.id).bind(team_id).fetch_one(&pool).await.unwrap_or(false);
+
+    if !in_team { 
+        return (StatusCode::FORBIDDEN, "Non fai parte di questo gruppo").into_response(); 
+    }
+
+    // 3. Esecuzione Update
+    match sqlx::query("UPDATE team SET name = ?1 WHERE id = ?2")
+        .bind(new_name).bind(team_id)
+        .execute(&pool).await 
+    {
+        Ok(_) => (StatusCode::OK, "Gruppo rinominato").into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
 }
 
 async fn get_messages(Extension(user): Extension<User>, State(pool): State<SqlitePool>, Query(params): Query<HashMap<String, String>>) -> impl IntoResponse {
