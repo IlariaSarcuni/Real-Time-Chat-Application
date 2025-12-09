@@ -3,7 +3,7 @@ use axum::{
     extract::{Request, State, Query, 
      ws::{Message, WebSocket, WebSocketUpgrade}, 
          Path}, 
-    http::{HeaderValue, Method, StatusCode, header::{AUTHORIZATION, CONTENT_TYPE}}, 
+    http::{ Method, StatusCode, header::{AUTHORIZATION, CONTENT_TYPE}}, 
     middleware::{Next, from_fn}, 
     response::IntoResponse, 
     routing::{get, post}};
@@ -17,7 +17,7 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 
 use colored::*;
-use tower_http::cors::{CorsLayer};
+use tower_http::cors::{CorsLayer, AllowOrigin};
 
 use std::sync::Arc;
 use dashmap::DashMap;
@@ -28,6 +28,7 @@ use std::io::Write;
 use std::fs::OpenOptions;
 
 use sysinfo::{System, get_current_pid};
+
 #[derive(Serialize, sqlx::FromRow)]
 struct Team {
     id: i64,
@@ -40,6 +41,11 @@ struct MessageResponse {
     message: String,
     ora: String, 
     data: String, 
+}
+
+#[derive(Serialize, sqlx::FromRow)]
+struct MemberResponse {
+    username: String,
 }
 
 #[derive(Serialize)]
@@ -73,7 +79,6 @@ async fn cpu_logger_task() {
     let mut sys = System::new_all();
     
     // Recuperiamo il PID (Process ID) del nostro programma
-    // get_current_pid() ora restituisce un Result, quindi usiamo .ok() o expect
     let pid = get_current_pid().expect("Impossibile recuperare il PID");
 
     let mut log_file = OpenOptions::new()
@@ -86,16 +91,13 @@ async fn cpu_logger_task() {
     
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(120)).await;
+        
         sys.refresh_processes(); 
         
-        // Cerchiamo il nostro processo specifico
         if let Some(process) = sys.process(pid) {
             let usage = process.cpu_usage();
             let log_entry = format!("[{}] - CPU Ruggine: {:.4}%\n", Local::now().to_rfc3339(), usage);
-            
-            // Scrittura su file (ignoriamo errori di scrittura per non fermare il server)
             let _ = log_file.write_all(log_entry.as_bytes());
-            
         }
     }
 }
@@ -114,10 +116,12 @@ async fn session(pool: Pool<Sqlite>) -> SessionStore<SessionSqlitePool> {
 
 fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>, chat_rooms: ChatRooms) -> Router {
     let config = AuthConfig::<i64>::default().with_anonymous_user_id(Some(1));
-    let cors_layer=CorsLayer::new().allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+    
+    let cors_layer = CorsLayer::new()
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
         .allow_credentials(true)
-        .allow_headers([CONTENT_TYPE,AUTHORIZATION]).allow_origin("http://localhost:4000"
-        .parse::<HeaderValue>().unwrap());
+        .allow_headers([CONTENT_TYPE, AUTHORIZATION])
+        .allow_origin(AllowOrigin::mirror_request());
   
   Router::new()
     .route("/", get(|| async {"Hello world!"}))
@@ -130,12 +134,14 @@ fn app(pool: Pool<Sqlite>, session_store : SessionStore<SessionSqlitePool>, chat
     .route("/create",post(create_team).route_layer(from_fn(auth)))
     .route("/invite",post(invite).route_layer(from_fn(auth)))
     .route("/accept",post(accept).route_layer(from_fn(auth)))
-    .route("/decline", post(decline).route_layer(from_fn(auth))) // <--- QUESTA MANCAVA!
+    .route("/decline", post(decline).route_layer(from_fn(auth))) 
     .route("/leave", post(leave_team).route_layer(from_fn(auth))) 
     .route("/send",post(send_message).route_layer(from_fn(auth)))
     .route("/messages", get(get_messages).route_layer(from_fn(auth))) 
     .route("/protected", get(protected).route_layer(from_fn(auth)))
     .route("/ws/team/{team_id}", get(websocket_handler).route_layer(from_fn(auth)))
+    // *** FIX QUI SOTTO: Ho cambiato :team_id in {team_id} ***
+    .route("/team/{team_id}/members", get(get_team_members).route_layer(from_fn(auth)))
     
     .layer(AuthSessionLayer::<User, i64, SessionSqlitePool, SqlitePool>::new(Some(pool.clone())).with_config(config))
     .layer(SessionLayer::new(session_store))
@@ -203,6 +209,29 @@ async fn get_messages(Extension(user): Extension<User>, State(pool): State<Sqlit
     (StatusCode::OK, Json(rows)).into_response()
 }
 
+async fn get_team_members(
+    Extension(user): Extension<User>,
+    State(pool): State<SqlitePool>, 
+    Path(team_id): Path<i64>
+) -> impl IntoResponse {
+    let caller_in_team: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user_team WHERE id_user = ?1 AND id_team = ?2)")
+        .bind(user.id).bind(team_id).fetch_one(&pool).await.unwrap_or(false);
+
+    if !caller_in_team {
+        return (StatusCode::FORBIDDEN, "Non fai parte di questo gruppo").into_response();
+    }
+
+    let members: Vec<MemberResponse> = sqlx::query_as(
+        "SELECT u.username FROM user u 
+         INNER JOIN user_team ut ON ut.id_user = u.id 
+         WHERE ut.id_team = ?1"
+    )
+    .bind(team_id)
+    .fetch_all(&pool).await.unwrap_or(vec![]);
+
+    (StatusCode::OK, Json(members)).into_response()
+}
+
 pub async fn create_team(Extension(user): Extension<User>, State(pool): State<SqlitePool>, Json(body): Json<Value>) -> impl IntoResponse {
     let name = body.get("name").and_then(|v| v.as_str()).unwrap_or("");
     if name.trim().is_empty() { return (StatusCode::BAD_REQUEST, "Il nome del gruppo non può essere vuoto").into_response(); }
@@ -217,7 +246,6 @@ pub async fn create_team(Extension(user): Extension<User>, State(pool): State<Sq
     (StatusCode::CREATED, Json(json!({ "ok": true, "team": { "id": team_id, "name": name } }))).into_response()
 }
 
-// Handler per uscire dal gruppo (già nel gruppo)
 async fn leave_team(Extension(user): Extension<User>, State(pool): State<SqlitePool>, Json(body): Json<Value>) -> impl IntoResponse {
     let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
     if team_id == 0 { return (StatusCode::BAD_REQUEST, "Invalid Team ID").into_response(); }
@@ -228,7 +256,6 @@ async fn leave_team(Extension(user): Extension<User>, State(pool): State<SqliteP
     }
 }
 
-// Handler per rifiutare un invito
 async fn decline(Extension(user): Extension<User>, State(pool): State<SqlitePool>, Json(body): Json<Value>) -> impl IntoResponse {
     let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
     if team_id == 0 { return (StatusCode::BAD_REQUEST, "Invalid Team ID").into_response(); }
@@ -287,7 +314,7 @@ async fn invite(Extension(user): Extension<User>, State(pool): State<SqlitePool>
         return (StatusCode::BAD_REQUEST, "Invalid payload").into_response(); 
     }
 
-    // 2. CHECK SICUREZZA (NUOVO): Il chiamante fa parte del gruppo?
+    // 2. CHECK SICUREZZA: Il chiamante fa parte del gruppo?
     let caller_in_team: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user_team WHERE id_user = ?1 AND id_team = ?2)")
         .bind(user.id).bind(team_id).fetch_one(&pool).await.unwrap_or(false);
 
@@ -306,7 +333,7 @@ async fn invite(Extension(user): Extension<User>, State(pool): State<SqlitePool>
         return (StatusCode::BAD_REQUEST, "Non puoi invitare te stesso!").into_response();
     }
 
-    // 5. Controllo se l'utente invitato è GIÀ nel gruppo
+    // 5. Controllo se l'utente è GIÀ MEMBRO del gruppo
     let already_in: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user_team WHERE id_user = ?1 AND id_team = ?2)")
         .bind(target_user_id).bind(team_id).fetch_one(&pool).await.unwrap_or(false);
     
@@ -314,14 +341,27 @@ async fn invite(Extension(user): Extension<User>, State(pool): State<SqlitePool>
         return (StatusCode::BAD_REQUEST, "L'utente è già membro del gruppo").into_response();
     }
 
-    // 6. Esecuzione Invito (Inserimento nel DB)
-    // Usiamo INSERT OR IGNORE o gestiamo l'errore per evitare doppi inviti pendenti
+    // 6. [FIX IMPORTANTE] Controllo se l'utente è GIÀ STATO INVITATO (Invito pendente)
+    let pending_invite: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM invite WHERE id_user = ?1 AND id_team = ?2)")
+        .bind(target_user_id).bind(team_id).fetch_one(&pool).await.unwrap_or(false);
+
+    if pending_invite {
+        // Se c'è già un invito, non diamo errore, diciamo solo "Tutto ok, è invitato".
+        // Questo evita crash se clicchi due volte o se c'è un invito fantasma.
+        return (StatusCode::OK, "Utente già invitato (invito pendente)").into_response();
+    }
+
+    // 7. Esecuzione Invito
     match sqlx::query("INSERT INTO invite (id_user, id_team) VALUES (?1, ?2)")
         .bind(target_user_id).bind(team_id)
         .execute(&pool).await 
     {
-        Ok(_) => (StatusCode::OK, "Invito inviato con successo").into_response(), 
-        Err(_) => (StatusCode::CONFLICT, "Utente probabilmente già invitato").into_response(), // Gestione base dell'errore
+        Ok(_) => (StatusCode::OK, "Invito inviato").into_response(), 
+        // Ora stampiamo l'errore vero nella console per capire cosa succede
+        Err(e) => {
+            println!("{} Errore DB Invito: {}", "[ERROR]".red(), e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Errore Database durante l'invito").into_response()
+        },
     }
 }
 

@@ -14,6 +14,10 @@ function ChatPage({ user }) {
     const [newMessage, setNewMessage] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
     
+    // NUOVI STATI PER LISTA MEMBRI
+    const [showMembersModal, setShowMembersModal] = useState(false);
+    const [members, setMembers] = useState([]);
+
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newTeamName, setNewTeamName] = useState("");
     const [showInviteModal, setShowInviteModal] = useState(false);
@@ -37,7 +41,11 @@ function ChatPage({ user }) {
         if (!currentTeam) return;
         API.getMessages(currentTeam.id).then(setMessages).catch(console.error);
         
-        const ws = new WebSocket(`ws://localhost:3000/ws/team/${currentTeam.id}`);
+        // WebSocket Dinamico (supporta IP locale per Android)
+        const { hostname, protocol } = window.location;
+        const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(`${wsProtocol}//${hostname}:3000/ws/team/${currentTeam.id}`);
+        
         ws.onmessage = (e) => {
             try { setMessages(prev => [...prev, JSON.parse(e.data)]); } catch (err) { console.error(err); }
         };
@@ -67,6 +75,19 @@ function ChatPage({ user }) {
             await API.inviteUser(inviteUsername, currentTeam.id);
             setShowInviteModal(false); setInviteUsername(""); alert("Invito inviato");
         } catch (err) { alert(err.message); }
+    };
+
+    // FUNZIONE PER APRIRE LISTA MEMBRI
+    const handleShowMembers = async () => {
+        if (!currentTeam) return;
+        try {
+            const list = await API.getTeamMembers(currentTeam.id);
+            setMembers(list);
+            setShowMembersModal(true);
+        } catch (err) {
+            console.error(err);
+            alert("Impossibile recuperare i membri");
+        }
     };
 
     const handleAcceptInvite = async (teamId) => {
@@ -159,6 +180,11 @@ function ChatPage({ user }) {
                                     <span className="text-primary opacity-50">#</span> {currentTeam.name}
                                 </h4>
                                 <div className="d-flex gap-2">
+                                    {/* BOTTONE LISTA MEMBRI */}
+                                    <Button variant="outline-info" className="d-flex align-items-center gap-2 shadow-sm px-3 fw-semibold" onClick={handleShowMembers}>
+                                        <i className="bi bi-people-fill fs-5"></i>
+                                    </Button>
+
                                     <Button variant="primary" className="d-flex align-items-center gap-2 shadow-sm px-3 fw-semibold" onClick={() => setShowInviteModal(true)}>
                                         <i className="bi bi-person-plus-fill fs-5"></i> <span className="d-none d-md-inline">Invita</span>
                                     </Button>
@@ -262,6 +288,26 @@ function ChatPage({ user }) {
                 <Modal.Header closeButton><Modal.Title>Invita</Modal.Title></Modal.Header>
                 <Modal.Body><Form.Control type="text" placeholder="Username..." value={inviteUsername} onChange={(e) => setInviteUsername(e.target.value)} autoFocus /></Modal.Body>
                 <Modal.Footer><Button variant="success" onClick={handleInvite} disabled={!inviteUsername.trim()}>Invia</Button></Modal.Footer>
+            </Modal>
+            
+            {/* NUOVO MODALE LISTA MEMBRI */}
+            <Modal show={showMembersModal} onHide={() => setShowMembersModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Membri del Gruppo</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <ListGroup variant="flush">
+                        {members.map((member, idx) => (
+                            <ListGroup.Item key={idx} className="d-flex align-items-center gap-2">
+                                <div className="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center" style={{width: '30px', height: '30px'}}>
+                                    {member.username.charAt(0).toUpperCase()}
+                                </div>
+                                {member.username}
+                                {user && user.username === member.username && <Badge bg="secondary" className="ms-auto">Tu</Badge>}
+                            </ListGroup.Item>
+                        ))}
+                    </ListGroup>
+                </Modal.Body>
             </Modal>
         </Container>
     );

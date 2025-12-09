@@ -1,4 +1,13 @@
-const SERVER_URL = 'http://localhost:3000';
+// URL Dinamico per supportare Android/Cross-Platform
+const getBaseUrl = () => {
+    // Ottiene protocollo e hostname (es. "http://192.168.1.10")
+    const { hostname, protocol } = window.location;
+    // Se la porta è 5173 (Vite), assumiamo che il server sia su 3000
+    // Se la porta è già 3000 (Produzione statica), usiamo lo stesso host
+    return `${protocol}//${hostname}:3000`;
+};
+
+const SERVER_URL = getBaseUrl();
 
 async function handleResponse(response) {
     if (!response.ok) {
@@ -64,6 +73,12 @@ const getUserInfo = async () => {
 /* TEAMS & MESSAGES */
 const getTeams = async () => {
     const response = await fetch(`${SERVER_URL}/list/teams`, { method: 'GET', credentials: 'include' });
+    return await handleResponse(response);
+};
+
+// NUOVA FUNZIONE: LISTA MEMBRI
+const getTeamMembers = async (teamId) => {
+    const response = await fetch(`${SERVER_URL}/team/${teamId}/members`, { method: 'GET', credentials: 'include' });
     return await handleResponse(response);
 };
 
@@ -142,7 +157,8 @@ const declineInvite = async (teamId) => {
 const API = { 
     register, logIn, logOut, getUserInfo,
     getTeams, getMessages, sendMessage, createTeam, leaveTeam,
-    inviteUser, getInvites, acceptInvite, declineInvite
+    inviteUser, getInvites, acceptInvite, declineInvite,
+    getTeamMembers // Aggiunto export
 };
 
 export default API;
