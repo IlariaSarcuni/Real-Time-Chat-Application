@@ -16,8 +16,7 @@ import ChatPage from './components/ChatPage';
 import NotFoundComponent from './components/NotFoundComponent';
 
 function App() {
-  // Imposto 'dark' come default
-  const [theme, setTheme] = useState('dark');
+  const [theme, setTheme] = useState('light');
   
   const [loggedIn, setLoggedIn] = useState(false);
   const [user, setUser] = useState(null); 
@@ -26,7 +25,7 @@ function App() {
   const location = useLocation();
 
   const toggleTheme = () => {
-    setTheme(currTheme => currTheme === "light" ? "dark" : "light");
+    setTheme(currTheme => currTheme === "light" ? "dark" : "light"); 
   }
 
   useEffect(() => {
@@ -36,7 +35,6 @@ function App() {
         setUser(userInfo);
         setLoggedIn(true);
       } catch { 
-        // CORREZIONE LINTER: Rimosso (err) inutilizzato
         setLoggedIn(false);
         setUser(null);
       } finally {
@@ -61,11 +59,6 @@ function App() {
 
   return (
     <ThemeContext.Provider value={theme}>
-      {/* LAYOUT FIX:
-          1. 'height: 100vh' -> Occupa tutta l'altezza della finestra.
-          2. 'd-flex flex-column' -> Organizza i figli (Navbar e Container) in colonna.
-          3. 'data-bs-theme' -> Applica il tema globale.
-      */}
       <div 
         data-bs-theme={theme} 
         className="d-flex flex-column" 
@@ -74,14 +67,9 @@ function App() {
         <Routes>
           <Route path="/" element={
             <>
-              {/* Navbar fissa in alto */}
-              <NavHeader toggleTheme={toggleTheme} loggedIn={loggedIn} logout={handleLogout} user={user} />
               
-              {/* CONTAINER FLEX:
-                  'flex-grow-1' -> Si espande per occupare tutto lo spazio rimanente sotto la Navbar.
-                  'overflow: hidden' -> Impedisce lo scroll della pagina intera (lo scroll lo gestisce la ChatPage).
-                  'position-relative' -> Utile per posizionamenti assoluti interni.
-              */}
+              <NavHeader toggleTheme={toggleTheme} loggedIn={loggedIn} logout={handleLogout} user={user} />            
+            
               <Container fluid className="p-0 flex-grow-1 position-relative" style={{ overflow: 'hidden' }}>
                 <Outlet />
               </Container>

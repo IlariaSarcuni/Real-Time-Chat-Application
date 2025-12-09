@@ -246,7 +246,6 @@ function ChatPage({ user }) {
                         <div className={`h-100 d-flex flex-column align-items-center justify-content-center ${theme === 'dark' ? 'text-light' : 'text-muted'}`}>
                             <div className="display-1 opacity-25 mb-3">🦀</div>
                             <h4>Benvenuto su Ruggine Chat</h4>
-                            <p>Seleziona un gruppo.</p>
                         </div>
                     )}
                 </Col>

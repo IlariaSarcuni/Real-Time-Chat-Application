@@ -7,7 +7,7 @@ import API from "../API.js";
 import { useContext, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
-function LoginForm(props) {
+function LoginForm() {
 
     // state
     const [username, setUsername] = useState('');
@@ -49,7 +49,7 @@ function LoginForm(props) {
                         <Card.Body className="pt-0">
                             <Form onSubmit={handleSubmit}>
                                 <Alert dismissible show={show} onClose={() => setShow(false)} variant="danger">{errorMessage}</Alert>
-                                <Form.Group className="mb-3" controlId="formBasicEmail">    {/* instead of id and for. Web accessibility */}
+                                <Form.Group className="mb-3" controlId="formBasicUsername">   
                                     <Form.Label className="fw-semibold">Username<span className="mandatory">*</span></Form.Label>
                                     <Form.Control type="text" placeholder="Inserisci il tuo username" value={username}
                                         onChange={event => setUsername(event.target.value)} required={true} />
@@ -73,7 +73,7 @@ function LoginForm(props) {
     )
 }
 
-function LogoutButton(props) {
+function LogoutButton() {
     return (
       <Button variant='outline-light'>Logout</Button>
     )
