@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Form, Row, Col } from "react-bootstrap";
+import { Alert, Button, Card, Form, Row, Col, Spinner } from "react-bootstrap";
 import { useContext, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
@@ -60,7 +60,9 @@ function LoginForm() {
                                         onChange={event => setPassword(event.target.value)} required={true} />
                                 </Form.Group>
                                 <Button type="submit" size="lg" disabled={loading} className="mt-3 login-button">
-                                    {loading ? 'Accesso in corso...' : 'Accedi'}
+                                    {loading ? (<>
+                                        <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/> 
+                                        {'Accesso in corso...'} </>) : 'Accedi'}
                                 </Button>
                                 <LineSeparator>oppure</LineSeparator>
                                 <Link className="btn btn-lg registration-button" to={"/register"}>Registrati</Link>
