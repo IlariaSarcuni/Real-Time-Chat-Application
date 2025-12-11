@@ -9,21 +9,36 @@ const getBaseUrl = () => {
 
 const SERVER_URL = getBaseUrl();
 
+// --- FUNZIONE DI GESTIONE RISPOSTA (CORRETTA) ---
 async function handleResponse(response) {
     if (!response.ok) {
         try {
             const errPayload = await response.text();
             try {
+                // Proviamo a parsare il JSON di errore del backend
                 const errJson = JSON.parse(errPayload);
-                if (errJson.error) throw new Error(errJson.error);
+
+                // 1. PRIORITÀ: Se c'è un campo 'message', usiamo quello (es. "Credenziali non valide")
                 if (errJson.message) throw new Error(errJson.message);
-            } catch { 
+
+                // 2. Se non c'è message, guardiamo 'error', ma SOLO se è una stringa descrittiva.
+                //    (Ignoriamo { error: true } che causava il bug precedente)
+                if (errJson.error && typeof errJson.error === 'string') throw new Error(errJson.error);
+
+            } catch (jsonError) {
+                // Se l'errore è stato lanciato da noi sopra (quindi ha un messaggio pulito), lo rilanciamo
+                if (jsonError.message && jsonError.message !== "Unexpected token" && !jsonError.message.includes("JSON")) {
+                    throw jsonError;
+                }
+                // Se il parsing fallisce o non ci sono campi utili, usiamo il testo grezzo se esiste
                 if (errPayload) throw new Error(errPayload);
             }
         } catch (e) {
+            // Rilancia l'errore pulito al frontend
             if (e.message) throw e;
         }
-        throw new Error(response.statusText || "Errore di connessione");
+        // Fallback finale se non riusciamo a leggere nulla dal corpo della risposta
+        throw new Error(response.statusText || "Errore di connessione al server");
     }
     
     const type = response.headers.get('Content-Type');
@@ -33,7 +48,8 @@ async function handleResponse(response) {
     return true; 
 }
 
-// AUTH & USER
+// --- AUTH & USER ---
+
 const register = async (credentials) => {
     const response = await fetch(`${SERVER_URL}/register`, {
         method: 'POST',
@@ -53,7 +69,7 @@ const logIn = async (credentials) => {
         });
         return await handleResponse(response);
     } catch (error) {
-        console.error('Login error: ', error); 
+        console.error('Errore login:', error); 
         throw error;
     }
 };
@@ -70,7 +86,8 @@ const getUserInfo = async () => {
     return await handleResponse(response);
 }
 
-// GRUPPI E MESSAGGI
+// --- GRUPPI E MESSAGGI ---
+
 const getTeams = async () => {
     const response = await fetch(`${SERVER_URL}/list/teams`, { method: 'GET', credentials: 'include' });
     return await handleResponse(response);
@@ -127,7 +144,8 @@ const leaveTeam = async (teamId) => {
     return await handleResponse(response);
 };
 
-// INVITI
+// --- INVITI ---
+
 const inviteUser = async (username, teamId) => {
     const response = await fetch(`${SERVER_URL}/invite`, {
         method: 'POST',

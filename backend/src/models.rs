@@ -1,0 +1,67 @@
+use serde::{Deserialize, Serialize};
+use sqlx::{prelude::FromRow, SqlitePool};
+use axum_session_auth::Authentication;
+use async_trait::async_trait;
+
+#[derive(Serialize, FromRow)]
+pub struct Team {
+    pub id: i64,
+    pub name: String,
+}
+
+#[derive(Serialize, FromRow)]
+pub struct MessageResponse {
+    pub username: String,
+    pub message: String,
+    pub ora: String,
+    pub data: String,
+}
+
+#[derive(Serialize, FromRow)]
+pub struct MemberResponse {
+    pub username: String,
+}
+
+#[derive(Serialize)]
+pub struct UserInfo {
+    pub id: i64,
+    pub username: String,
+}
+
+#[derive(Deserialize)]
+pub struct UserRequest {
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(FromRow)]
+pub struct UserSql {
+    pub id: i32,
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct User {
+    pub id: i64,
+    pub anonymous: bool,
+    pub username: String,
+}
+
+#[async_trait]
+impl Authentication<User, i64, SqlitePool> for User {
+    async fn load_user(userid: i64, pool: Option<&SqlitePool>) -> Result<User, anyhow::Error> {
+        if userid == 1 {
+            Ok(User { id: 1, anonymous: true, username: "guest".to_string() })
+        } else {
+            let u: UserSql = sqlx::query_as("SELECT * FROM user WHERE id = ?1")
+                .bind(userid)
+                .fetch_one(pool.unwrap())
+                .await?;
+            Ok(User { id: u.id as i64, anonymous: false, username: u.username })
+        }
+    }
+    fn is_active(&self) -> bool { !self.anonymous }
+    fn is_anonymous(&self) -> bool { self.anonymous }
+    fn is_authenticated(&self) -> bool { !self.anonymous }
+}

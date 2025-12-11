@@ -60,10 +60,13 @@ function App() {
 
   const handleLogout = async () => {
     try {
-        await fetch('http://localhost:3000/logout', { method: 'GET', credentials: 'include' });
+      // Usa la funzione API centralizzata invece della fetch manuale
+      await API.logOut();
     } catch(e) { console.log(e); }
+
     setLoggedIn(false);
     setUser(null);
+    // Reindirizza al login
     window.location.href = '/login';
   };
 

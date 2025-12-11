@@ -103,8 +103,8 @@ function ChatPage({ user }) {
     };
     
     const handleAccept = (id) => API.acceptInvite(id).then(refreshAllData).catch(e => console.error(e));
-    const handleDecline = (id) => { if(window.confirm("Rifiuti?")) API.declineInvite(id).then(refreshAllData); };
-    const handleLeave = () => { if(window.confirm("Esci?")) API.leaveTeam(currentTeam.id).then(() => { setCurrentTeam(null); setMessages([]); refreshAllData(); }); };
+    const handleDecline = (id) => { if(window.confirm("Sei sicuro di voler rifiutare l'invito?")) API.declineInvite(id).then(refreshAllData); };
+    const handleLeave = () => { if(window.confirm("Vuoi davvero abbandonare il gruppo?")) API.leaveTeam(currentTeam.id).then(() => { setCurrentTeam(null); setMessages([]); refreshAllData(); }); };
 
     const sidebarClass = theme === 'dark' ? 'bg-black border-secondary' : 'bg-light';
 
