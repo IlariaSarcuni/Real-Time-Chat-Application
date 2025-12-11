@@ -1,5 +1,5 @@
 import { useState, useContext } from "react";
-import { Form, Button, Alert, Row, Col, Card } from "react-bootstrap";
+import { Form, Button, Alert, Row, Col, Card, Spinner } from "react-bootstrap";
 import { useNavigate, Link } from "react-router-dom";
 
 import LineSeparator from "../common/LineSeparator";
@@ -100,7 +100,9 @@ function RegisterForm() {
 
                                 <div className="d-grid gap-2">
                                     <Button className="mt-3 login-button" size="lg" type="submit" disabled={loading}>
-                                        {loading ? 'Registrazione...' : 'Crea Account'}
+                                        {loading ? (<>
+                                            <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/> 
+                                            {'Registrazione in corso...'} </>) : 'Crea Account'}
                                     </Button>
                                     <LineSeparator>oppure</LineSeparator>
                                     <Link className="btn btn-lg registration-button" to={"/login"}>Accedi</Link>
