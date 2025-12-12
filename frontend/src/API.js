@@ -99,6 +99,11 @@ const getTeamMembers = async (teamId) => {
     return await handleResponse(response);
 };
 
+const getOnlineMembers = async (teamId) => {
+    const response = await fetch(`${SERVER_URL}/team/${teamId}/online`, { method: 'GET', credentials: 'include'})
+    return await handleResponse(response);
+}
+
 const getMessages = async (teamId) => {
     const response = await fetch(`${SERVER_URL}/messages?team_id=${teamId}`, { method: 'GET', credentials: 'include' });
     return await handleResponse(response);
@@ -184,7 +189,7 @@ const declineInvite = async (teamId) => {
 
 const API = { 
     register, logIn, logOut, getUserInfo,
-    getTeams, getMessages, sendMessage, createTeam, renameTeam, leaveTeam,
+    getTeams, getOnlineMembers, getMessages, sendMessage, createTeam, renameTeam, leaveTeam,
     inviteUser, getInvites, acceptInvite, declineInvite,
     getTeamMembers
 };

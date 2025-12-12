@@ -14,6 +14,7 @@ function ChatPage({ user }) {
     const [invites, setInvites] = useState([]);
     const [currentTeam, setCurrentTeam] = useState(null);
     const [messages, setMessages] = useState([]);
+    const [onlineMembers, setOnlineMembers] = useState([]);
 
     // --- STATI INPUT & UI ---
     const [newMessage, setNewMessage] = useState("");
@@ -47,7 +48,16 @@ function ChatPage({ user }) {
     // WebSocket logic
     useEffect(() => {
         if (!currentTeam) return;
+
         API.getMessages(currentTeam.id).then(setMessages).catch(console.error);
+
+        const fecthOnlineMembers = () => {
+            API.getOnlineMembers(currentTeam.id)
+            .then(list => setOnlineMembers(Array.isArray(list) ? list.map(m => m.username) : []))
+            .catch(console.error)
+        }
+        fecthOnlineMembers();
+        const interval = setInterval(fecthOnlineMembers, 5000);
 
         const { hostname, protocol } = window.location;
         const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
@@ -57,7 +67,10 @@ function ChatPage({ user }) {
         ws.onmessage = (e) => {
             try { setMessages(prev => [...prev, JSON.parse(e.data)]); } catch (err) { console.error(err); }
         };
-        return () => { if (ws.readyState === 1) ws.close(); };
+        return () => { 
+            clearInterval(interval);
+            if (ws.readyState === 1) ws.close(); 
+        };
     }, [currentTeam]);
 
     // --- HANDLERS ---
