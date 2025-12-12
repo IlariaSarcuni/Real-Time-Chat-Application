@@ -113,6 +113,14 @@ pub async fn leave_team(Extension(user): Extension<User>, State(state): State<Ap
     if team_id == 0 { return Err(AppError::BadRequest("ID Gruppo invalido.".into())); }
 
     sqlx::query("DELETE FROM user_team WHERE id_user = ?1 AND id_team = ?2").bind(user.id).bind(team_id).execute(&state.pool).await?;
+
+    // send notification message user left team
+    let system_message = format!(r#"{{"type": "system", "message": {} ha abbandonato il gruppo", "username": "{}", "event": "left"}}"#, user.username, user.username);
+    if let Some(tx) = state.chat_rooms.get(&team_id) {
+        let _ = tx.send(system_message.clone());
+        println!("{} {}", "[INFO]".cyan(), system_message);
+    }
+
     Ok(Json(json!({ "success": true, "message": "Hai abbandonato il gruppo." })))
 }
 

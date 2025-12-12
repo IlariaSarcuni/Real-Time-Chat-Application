@@ -110,7 +110,7 @@ function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMes
                                     {/* 2. System message */}
                                     <span className={`small text-center px-2 py-1 rounded ${theme === 'dark' ? 'text-white opacity-75' : 'text-muted'}`} 
                                         style={{ backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }}>
-                                            **{msg.message}** {/* Il testo formattato viene dal backend */}
+                                            **{msg.message}**
                                     </span>
                                 </div>
                             </div>
