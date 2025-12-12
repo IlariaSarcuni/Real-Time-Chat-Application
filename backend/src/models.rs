@@ -15,6 +15,8 @@ pub struct MessageResponse {
     pub message: String,
     pub ora: String,
     pub data: String,
+    #[sqlx(rename = "type")]
+    pub msg_type: String,   // to distinguish 'chat' from 'system' message
 }
 
 #[derive(Serialize, FromRow)]

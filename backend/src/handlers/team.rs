@@ -112,10 +112,18 @@ pub async fn leave_team(Extension(user): Extension<User>, State(state): State<Ap
     let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
     if team_id == 0 { return Err(AppError::BadRequest("ID Gruppo invalido.".into())); }
 
+    let mut tx = state.pool.begin().await?;
+
     sqlx::query("DELETE FROM user_team WHERE id_user = ?1 AND id_team = ?2").bind(user.id).bind(team_id).execute(&state.pool).await?;
 
+    let system_message_db = format!("{} ha abbandonato il gruppo", user.username);
+    sqlx::query("INSERT INTO message (id_user, id_team, message, data, ora, type) VALUES (?1, ?2, ?3, CURRENT_DATE, CURRENT_TIME, 'system')")
+        .bind(user.id).bind(team_id).bind(&system_message_db).execute(&mut *tx).await?;
+
+    tx.commit().await?;
+
     // send notification message user left team
-    let system_message = format!(r#"{{"type": "system", "message": {} ha abbandonato il gruppo", "username": "{}", "event": "left"}}"#, user.username, user.username);
+    let system_message = format!(r#"{{"type": "system", "message": "{} ha abbandonato il gruppo", "username": "{}", "event": "left"}}"#, user.username, user.username);
     if let Some(tx) = state.chat_rooms.get(&team_id) {
         let _ = tx.send(system_message.clone());
         println!("{} {}", "[INFO]".cyan(), system_message);
@@ -160,10 +168,15 @@ pub async fn accept(Extension(user): Extension<User>, State(state): State<AppSta
     let mut tx = state.pool.begin().await?;
     sqlx::query("INSERT INTO user_team (id_user, id_team) VALUES (?1, ?2)").bind(user.id).bind(team_id).execute(&mut *tx).await?;
     sqlx::query("DELETE FROM invite WHERE id_user = ?1 AND id_team = ?2").bind(user.id).bind(team_id).execute(&mut *tx).await?;
+    
+    let system_message_db = format!("{} è entrato nel gruppo", user.username);
+    sqlx::query("INSERT INTO message (id_user, id_team, message, data, ora, type) VALUES (?1, ?2, ?3, CURRENT_DATE, CURRENT_TIME, 'system')")
+        .bind(user.id).bind(team_id).bind(&system_message_db).execute(&mut *tx).await?;
+    
     tx.commit().await?;
 
     // send notification message user joined team
-    let system_message = format!(r#"{{"type": "system", "message": {} è entrato nel gruppo", "username": "{}", "event": "joined"}}"#, user.username, user.username);
+    let system_message = format!(r#"{{"type": "system", "message": "{} è entrato nel gruppo", "username": "{}", "event": "joined"}}"#, user.username, user.username);
     if let Some(tx) = state.chat_rooms.get(&team_id) {
         let _ = tx.send(system_message.clone());
         println!("{} {}", "[INFO]".cyan(), system_message);
@@ -187,7 +200,7 @@ pub async fn get_messages(Extension(user): Extension<User>, State(state): State<
 
     if !check_membership(user.id, team_id, &state.pool).await? { return Err(AppError::Forbidden); }
 
-    let rows: Vec<MessageResponse> = sqlx::query_as(r#"SELECT u.username, m.message, m.ora, m.data FROM message m JOIN user u ON m.id_user = u.id WHERE m.id_team = ?1 ORDER BY m.data ASC, m.ora ASC"#)
+    let rows: Vec<MessageResponse> = sqlx::query_as(r#"SELECT u.username, m.message, m.ora, m.data, m.type FROM message m JOIN user u ON m.id_user = u.id WHERE m.id_team = ?1 ORDER BY m.data ASC, m.ora ASC"#)
         .bind(team_id).fetch_all(&state.pool).await?;
     Ok(Json(rows))
 }
@@ -199,14 +212,15 @@ pub async fn send_message(Extension(user): Extension<User>, State(state): State<
     if team_id == 0 || msg.trim().is_empty() { return Err(AppError::BadRequest("Messaggio non valido.".into())); }
     if !check_membership(user.id, team_id, &state.pool).await? { return Err(AppError::Forbidden); }
 
-    sqlx::query("INSERT INTO message (id_user,id_team,message,data,ora) VALUES (?1,?2,?3, CURRENT_DATE, CURRENT_TIME)")
+    sqlx::query("INSERT INTO message (id_user,id_team,message,data,ora,type) VALUES (?1,?2,?3, CURRENT_DATE, CURRENT_TIME, 'chat')")
         .bind(user.id).bind(team_id).bind(msg).execute(&state.pool).await?;
 
     let msg_payload = json!({
         "username": user.username,
         "message": msg,
         "ora": Local::now().format("%H:%M:%S").to_string(),
-        "data": Local::now().format("%Y-%m-%d").to_string() 
+        "data": Local::now().format("%Y-%m-%d").to_string(),
+        "type": "chat"
     });
 
     if let Some(tx) = state.chat_rooms.get(&team_id) {
