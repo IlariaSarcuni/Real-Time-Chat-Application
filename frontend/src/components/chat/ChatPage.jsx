@@ -53,7 +53,11 @@ function ChatPage({ user }) {
         API.getMessages(currentTeam.id).then(setMessages).catch(console.error);
         const fetchOnlineMembers = () => {
             API.getOnlineMembers(currentTeam.id)
-            .then(list => setOnlineMembers(Array.isArray(list) ? list.map(member => member.username) : []))
+            .then(list => {
+                let usernames = Array.isArray(list) ? list.map(member => member.username) : []
+                usernames.push(user.username);  // retrieve current user, not officially online in server
+                setOnlineMembers(Array.from(new Set(usernames)));
+            })
             .catch(console.error)
         }
         fetchOnlineMembers();
