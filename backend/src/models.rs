@@ -16,6 +16,7 @@ pub struct MessageResponse {
     pub ora: String,
     pub data: String,
     #[sqlx(rename = "type")]
+    #[serde(rename = "type")]
     pub msg_type: String,   // to distinguish 'chat' from 'system' message
 }
 

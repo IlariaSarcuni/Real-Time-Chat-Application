@@ -102,24 +102,24 @@ function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMes
                         const isSystemMessage = msg.type === "system";  // someone joins or leaves team
                         const showDate = (!prevMsg || msg.data !== prevMsg.data)
 
+                        const dateSeparator = showDate ? (
+                            <div className="d-flex justify-content-center my-3">
+                                <Badge bg={theme === 'dark' ? 'dark' : 'secondary'} className="opacity-75 fw-normal px-3 py-1 rounded-pill border">{formatDateLabel(msg.data)}</Badge>
+                            </div>
+                        ) : null;
+
                         if (isSystemMessage) { 
                             // skip following bubbles logic
                             return (
                                 <div key={idx} className="d-flex flex-column">
-                                    {/* 1. Show date if necessary */}
-                                    {showDate && (
-                                        <div className="d-flex justify-content-center my-3">
-                                            <Badge bg={theme === 'dark' ? 'dark' : 'secondary'} className="opacity-75 fw-normal px-3 py-1 rounded-pill border">{formatDateLabel(msg.data)}</Badge>
-                                        </div>
-                                    )}
-                                <div className="d-flex justify-content-center my-1">
-                                    {/* 2. System message */}
-                                    <span className={`small text-center px-2 py-1 rounded ${theme === 'dark' ? 'text-white opacity-75' : 'text-muted'}`} 
-                                        style={{ backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }}>
-                                            **{msg.message}**
-                                    </span>
+                                    {dateSeparator} {/* Usa il separatore unificato */}
+                                    <div className="d-flex justify-content-center my-1">
+                                        <span className={`small text-center px-2 py-1 rounded ${theme === 'dark' ? 'text-white opacity-75' : 'text-muted'}`} 
+                                            style={{ backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }}>
+                                                **{msg.message}**
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
                             );
                         }
 
@@ -129,11 +129,7 @@ function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMes
 
                         return (
                             <div key={idx} className="d-flex flex-column">
-                                {showDate && (
-                                    <div className="d-flex justify-content-center my-3">
-                                        <Badge bg={theme === 'dark' ? 'dark' : 'secondary'} className="opacity-75 fw-normal px-3 py-1 rounded-pill border">{formatDateLabel(msg.data)}</Badge>
-                                    </div>
-                                )}
+                                {dateSeparator}
                                 <div className={`mb-2 d-flex flex-column ${isMine ? 'align-items-end' : 'align-items-start'}`}>
                                     <div className={`p-2 px-3 rounded-3 shadow-sm border ${bubbleClass}`}
                                         style={{ maxWidth: '75%', minWidth: '120px', position: 'relative', border: theme === 'dark' ? '1px solid #444' : '' }}>
