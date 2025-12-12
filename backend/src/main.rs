@@ -64,6 +64,7 @@ async fn main() {
         .route("/rename", post(h_team::rename_team).route_layer(from_fn(auth_middleware)))
         .route("/leave", post(h_team::leave_team).route_layer(from_fn(auth_middleware)))
         .route("/team/{team_id}/members", get(h_team::get_team_members).route_layer(from_fn(auth_middleware)))
+        .route("/team/{team_id}/online", get(h_team::get_online_members).route_layer(from_fn(auth_middleware)))
         // Invites & Messages
         .route("/invite", post(h_team::invite).route_layer(from_fn(auth_middleware)))
         .route("/accept", post(h_team::accept).route_layer(from_fn(auth_middleware)))

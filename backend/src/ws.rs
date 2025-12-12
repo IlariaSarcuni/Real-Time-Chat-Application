@@ -5,6 +5,8 @@ use axum::{
 };
 use futures_util::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::broadcast;
+use std::collections::HashSet;
+use std::sync::Arc;
 use colored::*;
 
 use crate::{models::User, state::AppState};
@@ -31,6 +33,14 @@ pub async fn websocket_handler(
 }
 
 async fn handle_socket(socket: WebSocket, user: User, state: AppState, team_id: i64) {
+    // online users in team
+    let team_users = state.online_users.entry(team_id).or_insert_with(|| Arc::new(tokio::sync::Mutex::new(HashSet::new()))).clone();
+    {
+        let mut users = team_users.lock().await;
+        users.insert(user.id);
+        println!("{} online", user.username);
+    }
+
     let tx = state.chat_rooms.entry(team_id).or_insert_with(|| broadcast::channel(100).0).clone();
     let mut rx = tx.subscribe();
     let (mut sender, mut receiver) = socket.split();
@@ -50,5 +60,12 @@ async fn handle_socket(socket: WebSocket, user: User, state: AppState, team_id: 
     });
 
     tokio::select! { _ = &mut send_task => recv_task.abort(), _ = &mut recv_task => send_task.abort() }
-    println!("{} Disconnected {}", "[INFO]".cyan(), user.username);
+
+    {
+        let mut users = team_users.lock().await;
+        users.remove(&user.id);
+        println!("{} online", user.username);
+    }
+
+    println!("{} User {} disconnected from team {}", "[INFO]".cyan(), user.username, team_id);
 }

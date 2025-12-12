@@ -1,6 +1,6 @@
 use axum::{Extension, Json, extract::{State, Query, Path}, http::StatusCode, response::IntoResponse};
 use serde_json::{Value, json};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use chrono::Local;
 
 use crate::{models::*, error::AppError, state::AppState};
@@ -30,6 +30,58 @@ pub async fn get_team_members(Extension(user): Extension<User>, State(state): St
     let members: Vec<MemberResponse> = sqlx::query_as("SELECT u.username FROM user u INNER JOIN user_team ut ON ut.id_user = u.id WHERE ut.id_team = ?1")
         .bind(team_id).fetch_all(&state.pool).await?;
     Ok(Json(members))
+}
+
+pub async fn get_online_members(
+    Extension(user): Extension<User>,
+    State(state): State<AppState>,
+    Path(team_id): Path<i64>
+) -> impl IntoResponse {
+    // 1. Check if caller user is member of the team
+    let caller_query = "SELECT EXISTS(SELECT 1 FROM user_team WHERE id_user = ?1 AND id_team = ?2)";
+    let is_caller_in_team: bool = sqlx::query_scalar(caller_query)
+        .bind(user.id).bind(team_id).fetch_one(&state.pool).await.unwrap_or(false);
+
+    if !is_caller_in_team {
+        return (StatusCode::FORBIDDEN, "Non appartieni a questo gruppo").into_response();
+    }
+
+    // 2. Retrieve id online usersfrom DashMap
+    let online_ids: HashSet<i64> = match state.online_users.get(&team_id) {
+        Some(entry) => {
+            entry.lock().await.clone()
+        },
+        None => {
+            HashSet::new()
+        }
+    };
+
+    if online_ids.is_empty() {
+        return (StatusCode::OK, Json(json!([]))).into_response();
+    }
+
+    // 3. Convert id in username
+    let placeholders: Vec<String> = (0..online_ids.len()).map(|_| "?".to_string()).collect();
+    let query_string = format!(
+        "SELECT username FROM user WHERE id IN ({})", 
+        placeholders.join(",")
+    );
+
+    let mut query = sqlx::query_as::<_, MemberResponse>(&query_string);
+    for id in online_ids.iter() {
+        query = query.bind(id);
+    }
+
+    // 4. Execute query
+    let online_members: Vec<MemberResponse> = match query.fetch_all(&state.pool).await {
+        Ok(members) => members,
+        Err(e) => {
+            eprintln!("Errore DB nel recupero nomi utente online: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Errore Database").into_response();
+        }
+    };
+
+    (StatusCode::OK, Json(online_members)).into_response()
 }
 
 // --- AZIONI TEAM ---
