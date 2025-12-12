@@ -1,11 +1,11 @@
 import { useContext, useRef, useEffect } from 'react';
-import { Col, Row, Form, Button, Alert, Badge } from 'react-bootstrap';
+import { Col, Row, Form, Button, Alert, Badge, Dropdown } from 'react-bootstrap';
 import ThemeContext from '../../contexts/ThemeContext';
 import { getColorFromUsername, formatDateLabel } from '../../utils/chatUtils';
 
 function ChatWindow({ 
     currentTeam, messages, user, errorMsg, setErrorMsg, 
-    newMessage, setNewMessage, onSend, 
+    newMessage, setNewMessage, onlineMembers, onSend, 
     onLeave, onShowMembers, onShowInvite, onShowRename 
 }) {
     const theme = useContext(ThemeContext);
@@ -37,17 +37,51 @@ function ChatWindow({
 
             {/* HEADER */}
             <div className={`p-3 border-bottom d-flex justify-content-between align-items-center shadow-sm ${headerClass}`} style={{ height: '70px' }}>
-                <h4 className="m-0 fw-bold d-flex align-items-center gap-2">
-                    <span><span className="text-primary opacity-50">#</span> {currentTeam.name}</span>
-                    <Button variant="link" className={`p-0 text-decoration-none ${theme === 'dark' ? 'text-secondary' : 'text-muted'}`} onClick={onShowRename}>
-                        <i className="bi bi-pencil-square fs-6"></i>
-                    </Button>
-                </h4>
-                <div className="d-flex gap-2">
-                    <Button variant="secondary" onClick={onShowMembers} style={{ width: '45px', height: '45px' }}><i className="bi bi-people-fill"></i></Button>
-                    <Button variant="primary" onClick={onShowInvite} style={{ width: '45px', height: '45px' }}><i className="bi bi-person-plus-fill"></i></Button>
-                    <Button variant="danger" onClick={onLeave} style={{ width: '45px', height: '45px' }}><i className="bi bi-box-arrow-right"></i></Button>
+                {/* 1. Group icon and info */}
+                <div className="d-flex align-items-center me-auto">
+                    {/* 1.1 Icon */}
+                    <div className="text-white rounded-circle d-flex justify-content-center align-items-center me-3"
+                        style={{ width: '40px', height: '40px', backgroundColor: getColorFromUsername(currentTeam.name) }}>
+                        <i className="bi bi-people-fill fs-5"></i>
+                    </div>
+                    {/* 1.2 Members online */}
+                    <div className="d-flex flex-column">
+                        <div className="fw-bold">{currentTeam.name}</div>
+                        <div className="d-flex align-items-center" style={{ fontSize: '0.8rem', color: '#6c757d' }}>
+                            <span className="rounded-circle me-1" style={{ width: '8px', height: '8px', backgroundColor: onlineMembers.length > 0 ? '#28a745' : '#6c757d' }}></span>
+                            <span className={onlineMembers.length > 0 ? "text-success" : "text-muted"}>
+                                {onlineMembers.length} {onlineMembers.length === 1 ? 'membro online' : 'membri online'}
+                            </span>
+                        </div>
+                    </div>
                 </div>
+                {/* 2. Group buttons */}
+                <div className="ms-auto d-flex gap-2">
+                    {/* 2.1 Show Members (more frequent action separately) */}
+                    <Button variant="light" onClick={onShowMembers} title="Vedi Membri" style={{ width: '45px', height: '45px' }}
+                        className={`p-1 d-flex align-items-center justify-content-center ${theme === 'dark' ? 'text-secondary' : 'text-muted'} rounded`}>
+                        <i className="bi bi-people-fill"></i>
+                    </Button>
+                    {/* 2.2 Invite, Rename and Leave */}
+                    <Dropdown align="end">
+                        <Dropdown.Toggle variant="light" id="group-actions-dropdown" style={{ width: '45px', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        className={`p-1 ${theme === 'dark' ? 'text-secondary' : 'text-muted'} rounded`}>
+                            <i className="bi bi-three-dots-vertical fs-6"></i>
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu variant={theme}>
+                            <Dropdown.Item onClick={onShowInvite}>
+                                <i className="bi bi-person-plus-fill me-2"></i> Invita Utente
+                            </Dropdown.Item>
+                            <Dropdown.Item onClick={onShowRename}>
+                                <i className="bi bi-pencil-square me-2"></i> Rinomina Gruppo
+                            </Dropdown.Item>
+                            <Dropdown.Divider />
+                            <Dropdown.Item onClick={onLeave} className="text-danger">
+                                <i className="bi bi-box-arrow-right me-2"></i> Abbandona Gruppo
+                            </Dropdown.Item>
+                        </Dropdown.Menu>
+                    </Dropdown>
+                </div>    
             </div>
 
             {/* MESSAGGI */}

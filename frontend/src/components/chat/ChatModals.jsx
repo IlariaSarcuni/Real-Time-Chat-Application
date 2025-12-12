@@ -43,22 +43,31 @@ export function RenameModal({ show, onHide, value, onChange, onSubmit }) {
     );
 }
 
-export function MembersModal({ show, onHide, members, user }) {
+export function MembersModal({ show, onHide, members, onlineMembers, user }) {
     return (
         <Modal show={show} onHide={onHide} centered>
             <Modal.Header closeButton><Modal.Title>Membri del Gruppo</Modal.Title></Modal.Header>
             <Modal.Body>
                 <ListGroup variant="flush">
-                    {members.map((member, idx) => (
-                        <ListGroup.Item key={idx} className="d-flex align-items-center gap-2">
-                            <div className="text-white rounded-circle d-flex justify-content-center align-items-center"
-                                style={{ width: '30px', height: '30px', backgroundColor: getColorFromUsername(member.username) }}>
-                                {member.username.charAt(0).toUpperCase()}
-                            </div>
-                            {member.username}
-                            {user && user.username === member.username && <Badge bg="secondary" className="ms-auto">Tu</Badge>}
-                        </ListGroup.Item>
-                    ))}
+                    {members.map((member, idx) => {
+                        const isOnline = onlineMembers.includes(member.username);
+
+                        return (
+                            <ListGroup.Item key={idx} className="d-flex align-items-center gap-2">
+                                {/* User avatar */}
+                                <div className="text-white rounded-circle d-flex justify-content-center align-items-center"
+                                    style={{ width: '30px', height: '30px', backgroundColor: getColorFromUsername(member.username) }}>
+                                    {member.username.charAt(0).toUpperCase()}
+                                </div>
+                                {member.username}
+                                {/* User online state */}
+                                <div title={isOnline ? "Online": "Offline"} className="rounded-circle"
+                                    style={{ width: "8px", height: "8px", backgroundColor: isOnline ? "green" : "gray"}}>
+                                </div>
+                                {user && user.username === member.username && <Badge bg="secondary" className="ms-auto">Tu</Badge>}
+                            </ListGroup.Item>
+                        );
+                    })}
                 </ListGroup>
             </Modal.Body>
         </Modal>

@@ -57,7 +57,7 @@ function ChatPage({ user }) {
             .catch(console.error)
         }
         fecthOnlineMembers();
-        const interval = setInterval(fecthOnlineMembers, 5000);
+        const interval = setInterval(fecthOnlineMembers, 5000); // TODO: change polling
 
         const { hostname, protocol } = window.location;
         const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
@@ -170,6 +170,7 @@ function ChatPage({ user }) {
                     setErrorMsg={setErrorMsg}
                     newMessage={newMessage}
                     setNewMessage={setNewMessage}
+                    onlineMembers={onlineMembers}
                     onSend={handleSend}
                     onLeave={handleLeave}
                     onShowMembers={handleShowMembers}
@@ -181,7 +182,7 @@ function ChatPage({ user }) {
             {/* 3. MODALI */}
             <CreateTeamModal show={showCreateModal} onHide={() => setShowCreateModal(false)} value={newTeamName} onChange={setNewTeamName} onSubmit={handleCreateTeam} />
             <InviteModal show={showInviteModal} onHide={() => setShowInviteModal(false)} value={inviteUsername} onChange={setInviteUsername} onSubmit={handleInvite} />
-            <MembersModal show={showMembersModal} onHide={() => setShowMembersModal(false)} members={members} user={user} />
+            <MembersModal show={showMembersModal} onHide={() => setShowMembersModal(false)} members={members} onlineMembers={onlineMembers} user={user} />
             <RenameModal show={showRenameModal} onHide={() => setShowRenameModal(false)} value={renameValue} onChange={setRenameValue} onSubmit={handleRename} />
 
         </Container>
