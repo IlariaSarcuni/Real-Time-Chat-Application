@@ -33,12 +33,17 @@ pub async fn websocket_handler(
 }
 
 async fn handle_socket(socket: WebSocket, user: User, state: AppState, team_id: i64) {
-    // online users in team
+    // user joined team. Now online
     let team_users = state.online_users.entry(team_id).or_insert_with(|| Arc::new(tokio::sync::Mutex::new(HashSet::new()))).clone();
     {
         let mut users = team_users.lock().await;
         users.insert(user.id);
-        println!("{} online", user.username);
+        println!("{} {} is online", "[INFO]".cyan(), user.username);
+
+        let message = format!(r#"{{"type": "online", "user_id": {}, "username": "{}"}}"#, user.id, user.username);
+        if let Some(tx_chat) = state.chat_rooms.get(&team_id) {
+            let _ = tx_chat.send(message);
+        }
     }
 
     let tx = state.chat_rooms.entry(team_id).or_insert_with(|| broadcast::channel(100).0).clone();
@@ -64,7 +69,12 @@ async fn handle_socket(socket: WebSocket, user: User, state: AppState, team_id: 
     {
         let mut users = team_users.lock().await;
         users.remove(&user.id);
-        println!("{} online", user.username);
+        println!("{} {} is offline", "[INFO]".cyan(), user.username);
+
+        let message = format!(r#"{{"type": "offline", "user_id": {}, "username": "{}"}}"#, user.id, user.username);
+        if let Some(tx_chat) = state.chat_rooms.get(&team_id) {
+            let _ = tx_chat.send(message);
+        }
     }
 
     println!("{} User {} disconnected from team {}", "[INFO]".cyan(), user.username, team_id);

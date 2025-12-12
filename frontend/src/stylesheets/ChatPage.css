@@ -26,6 +26,20 @@
     color: #AAAAAA !important;
 }
 
+/* --- HEADER CHAT WINDOW --- */
+.group-actions-header {
+    background-color: transparent;
+    border: none;
+    transition: background-color 0.2s, border 0.2s;
+}
+
+.group-actions-header:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+body[data-theme="dark"] .group-actions-header:hover {
+    background-color: rgba(255, 255, 255, 0.1);  
+}
 
 /* --- BOTTONI ACCENTO PRIMARY (Light Mode) --- */
 .light .btn-primary {

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useContext } from 'react';
 import { Container, Row, Col, Button, ListGroup, ButtonGroup } from 'react-bootstrap';
 import API from '../../API';
 import ThemeContext from '../../contexts/ThemeContext';
+import "../../stylesheets/ChatPage.css";
 
 import ChatWindow from './ChatWindow';
 import { CreateTeamModal, InviteModal, MembersModal, RenameModal } from './ChatModals';
@@ -50,14 +51,12 @@ function ChatPage({ user }) {
         if (!currentTeam) return;
 
         API.getMessages(currentTeam.id).then(setMessages).catch(console.error);
-
-        const fecthOnlineMembers = () => {
+        const fetchOnlineMembers = () => {
             API.getOnlineMembers(currentTeam.id)
-            .then(list => setOnlineMembers(Array.isArray(list) ? list.map(m => m.username) : []))
+            .then(list => setOnlineMembers(Array.isArray(list) ? list.map(member => member.username) : []))
             .catch(console.error)
         }
-        fecthOnlineMembers();
-        const interval = setInterval(fecthOnlineMembers, 5000); // TODO: change polling
+        fetchOnlineMembers();
 
         const { hostname, protocol } = window.location;
         const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
@@ -65,10 +64,23 @@ function ChatPage({ user }) {
         const ws = new WebSocket(`${wsProtocol}//${hostname}:${wsPort}/ws/team/${currentTeam.id}`);
 
         ws.onmessage = (e) => {
-            try { setMessages(prev => [...prev, JSON.parse(e.data)]); } catch (err) { console.error(err); }
+            try {
+                const data = JSON.parse(e.data);
+
+                if(data.type === "chat") {
+                    setMessages(prev => [...prev, data]);
+                } else if (data.type === "online") {
+                    setOnlineMembers(prev => Array.from(new Set([...prev, data.username])));
+                } else if (data.type === "offline") {
+                    setOnlineMembers(prev => prev.filter(user => user !== data.username));
+                } else {    // fallback
+                    setMessages(prev => [...prev, data]);
+                }
+            } catch(err) {
+                console.error(err);
+            }
         };
         return () => { 
-            clearInterval(interval);
             if (ws.readyState === 1) ws.close(); 
         };
     }, [currentTeam]);
