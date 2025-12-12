@@ -1,11 +1,19 @@
 import dayjs from 'dayjs';
 
-export const getColorFromUsername = (username) => {
-    if (!username) return '#0d6efd';
-    const colors = [
-        '#d63384', '#fd7e14', '#198754', '#20c997', '#0dcaf0', 
-        '#6610f2', '#dc3545', '#0d6efd', '#fd7e14', '#6f42c1', '#adb5bd'
+/* bimodal palette */
+export const getColorFromUsername = (username, theme) => {
+    if (!username) return theme === 'dark' ? '#adb5bd' : '#0d6efd';
+
+    const lightModeColors = [
+        '#d63384', '#fd7e14', '#198754', '#6610f2', 
+        '#dc3545', '#0d6efd', '#6f42c1', '#343a40',
     ];
+    const darkModeColors = [
+        '#f8f9fa', '#e9ecef', '#dee2e6', '#adb5bd',
+        '#0dcaf0', '#20c997', '#ffc107', '#a343ff',
+    ];
+    const colors = theme === 'dark' ? darkModeColors : lightModeColors;
+
     let hash = 0;
     for (let i = 0; i < username.length; i++) {
         hash = username.charCodeAt(i) + ((hash << 5) - hash);

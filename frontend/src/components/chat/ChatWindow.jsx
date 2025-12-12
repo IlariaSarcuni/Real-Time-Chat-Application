@@ -48,7 +48,7 @@ function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMes
                 <div className="d-flex align-items-center me-auto">
                     {/* 1.1 Icon */}
                     <div className="text-white rounded-circle d-flex justify-content-center align-items-center me-3"
-                        style={{ width: '40px', height: '40px', backgroundColor: getColorFromUsername(currentTeam.name) }}>
+                        style={{ width: '40px', height: '40px', backgroundColor: getColorFromUsername(currentTeam.name, theme) }}>
                         <i className="bi bi-people-fill fs-5"></i>
                     </div>
                     {/* 1.2 Members online */}
@@ -124,7 +124,7 @@ function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMes
                         }
 
                         const isMine = user && msg.username === user.username;
-                        const userColor = getColorFromUsername(msg.username);
+                        const userColor = getColorFromUsername(msg.username, theme);
                         let bubbleClass = isMine ? "bg-success text-white" : (theme === 'dark' ? "bg-secondary text-white" : "bg-white text-dark");
 
                         return (
@@ -137,7 +137,7 @@ function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMes
                                 <div className={`mb-2 d-flex flex-column ${isMine ? 'align-items-end' : 'align-items-start'}`}>
                                     <div className={`p-2 px-3 rounded-3 shadow-sm border ${bubbleClass}`}
                                         style={{ maxWidth: '75%', minWidth: '120px', position: 'relative', border: theme === 'dark' ? '1px solid #444' : '' }}>
-                                        {!isMine && <div className="fw-bold small mb-1" style={{ color: userColor }}>{msg.username}</div>}
+                                        {!isMine && <div className="fw-bold small mb-1" style={{ color: userColor }}>~ {msg.username}</div>}
                                         <div style={{ paddingRight: '45px', wordWrap: 'break-word' }}>{msg.message}</div>
                                         <div className={`small position-absolute bottom-0 end-0 pe-2 pb-1 ${isMine || theme === 'dark' ? 'text-light opacity-75' : 'text-muted'}`} style={{ fontSize: '0.65rem' }}>
                                             {msg.ora?.substring(0, 5)}
