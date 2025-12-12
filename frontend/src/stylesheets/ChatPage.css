@@ -41,6 +41,18 @@ body[data-theme="dark"] .group-actions-header:hover {
     background-color: rgba(255, 255, 255, 0.1);  
 }
 
+/* NUOVE REGOLE PER DARK MODE (Disattiva l'effetto al click/focus) */
+body[data-theme="dark"] .group-actions-header:active,
+body[data-theme="dark"] .group-actions-header:focus,
+body[data-theme="dark"] .group-actions-header:focus:active {
+    background-color: transparent !important; 
+    box-shadow: none !important;
+}
+
+.group-actions-header:focus {
+    box-shadow: none !important;
+}
+
 /* --- BOTTONI ACCENTO PRIMARY (Light Mode) --- */
 .light .btn-primary {
     background-color: #B7410E !important; /* Arancione Bruciato Light Mode */

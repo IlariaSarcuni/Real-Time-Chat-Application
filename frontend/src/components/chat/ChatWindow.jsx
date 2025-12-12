@@ -1,15 +1,22 @@
-import { useContext, useEffect, useRef } from 'react';
-import ThemeContext from '../../contexts/ThemeContext';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { getColorFromUsername, formatDateLabel } from '../../utils/chatUtils';
 import { Alert, Badge, Button, Col, Dropdown, Form, Row } from 'react-bootstrap';
 
 import "../../stylesheets/ChatPage.css";
+import Picker from "emoji-picker-react";
+import ThemeContext from '../../contexts/ThemeContext';
 
 function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMessage, setNewMessage, onlineMembers, 
     onSend, onLeave, onShowMembers, onShowInvite, onShowRename }) 
     {
     const theme = useContext(ThemeContext);
     const messagesEndRef = useRef(null);
+
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const onEmojiClick = (emojiSelector) => {
+        setNewMessage(prevMsg => prevMsg + emojiSelector.emoji);
+        setShowEmojiPicker(false);  // close picker after selection
+    }
 
     // Auto-scroll
     useEffect(() => {
@@ -59,13 +66,13 @@ function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMes
                 <div className="ms-auto d-flex gap-2">
                     {/* 2.1 Show Members (more frequent action separately) */}
                     <Button variant="light" onClick={onShowMembers} title="Vedi Membri" style={{ width: '45px', height: '45px' }}
-                        className={`p-1 group-actions-header d-flex align-items-center justify-content-center ${theme === 'dark' ? 'text-secondary' : 'text-muted'} rounded`}>
+                        className={`p-1 group-actions-header d-flex align-items-center justify-content-center ${theme === 'dark' ? 'text-light' : 'text-muted'} rounded`}>
                         <i className="bi bi-people-fill"></i>
                     </Button>
                     {/* 2.2 Invite, Rename and Leave */}
                     <Dropdown align="end">
                         <Dropdown.Toggle variant="light" id="group-actions-dropdown" style={{ width: '45px', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        className={`p-1 group-actions-header ${theme === 'dark' ? 'text-secondary' : 'text-muted'} rounded`}>
+                        className={`p-1 group-actions-header ${theme === 'dark' ? 'text-light' : 'text-muted'} rounded`}>
                             <i className="bi bi-three-dots-vertical fs-6"></i>
                         </Dropdown.Toggle>
                         <Dropdown.Menu variant={theme}>
@@ -93,8 +100,7 @@ function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMes
                     {messages.map((msg, idx) => {
                         const prevMsg = messages[idx-1];
                         const isSystemMessage = msg.type === "system";  // someone joins or leaves team
-                        const showDate = (!isSystemMessage && (!prevMsg || msg.data !== prevMsg.data)) || 
-                            (isSystemMessage && (!prevMsg || msg.data !== prevMsg.data));
+                        const showDate = (!prevMsg || msg.data !== prevMsg.data)
 
                         if (isSystemMessage) { 
                             // skip following bubbles logic
@@ -147,8 +153,23 @@ function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMes
 
             {/* INPUT */}
             <div className={`p-3 border-top ${theme === 'dark' ? 'bg-dark border-secondary' : 'bg-light'}`}>
+                {/* 1. Emoji selector */}
+                {showEmojiPicker && (
+                    <div style={{ position: "absolute", bottom: "100px", right: "15px", zIndex: 1000}}>
+                        <Picker onEmojiClick={onEmojiClick} theme={theme}/>
+                    </div>
+                )}
+                {/* 2. Chat message */}
                 <Form onSubmit={onSend}>
                     <Row className="g-2">
+                        {/* 2.1 Emoji button */}
+                        <Col xs="auto" className="position-relative">
+                            <Button variant="light" className={`rounded-circle p-2 px-3 group-actions-header ${theme === 'dark' ? 'text-light' : 'text-muted'}`}
+                                onClick={() => setShowEmojiPicker(prev => !prev)} title="Seleziona emoji">
+                                    <i className='bi bi-emoji-smile'></i>
+                            </Button>
+                        </Col>
+                        {/* 2.2 Input field */}
                         <Col>
                             <Form.Control type="text" placeholder="Scrivi..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
                                 className="rounded-pill py-2 px-3"
