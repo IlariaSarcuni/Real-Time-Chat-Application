@@ -84,15 +84,39 @@ function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMes
                 </div>    
             </div>
 
-            {/* MESSAGGI */}
+            {/* MESSAGGES */}
             <div className="flex-grow-1 position-relative">
                 <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style={{ zIndex: 0, pointerEvents: 'none' }}>
                     <div style={{ fontSize: '15rem', opacity: '0.1', filter: theme === 'dark' ? 'invert(1)' : 'grayscale(100%)' }}>🦀</div>
                 </div>
                 <div className="position-absolute top-0 start-0 w-100 h-100 p-4" style={{ overflowY: 'auto', zIndex: 1 }}>
                     {messages.map((msg, idx) => {
-                        const prevMsg = messages[idx - 1];
-                        const showDate = !prevMsg || msg.data !== prevMsg.data;
+                        const prevMsg = messages[idx-1];
+                        const isSystemMessage = msg.type === "system";  // someone joins or leaves team
+                        const showDate = (!isSystemMessage && (!prevMsg || msg.data !== prevMsg.data)) || 
+                            (isSystemMessage && (!prevMsg || msg.data !== prevMsg.data));
+
+                        if (isSystemMessage) { 
+                            // skip following bubbles logic
+                            return (
+                                <div key={idx} className="d-flex flex-column">
+                                    {/* 1. Show date if necessary */}
+                                    {showDate && (
+                                        <div className="d-flex justify-content-center my-3">
+                                            <Badge bg={theme === 'dark' ? 'dark' : 'secondary'} className="opacity-75 fw-normal px-3 py-1 rounded-pill border">{formatDateLabel(msg.data)}</Badge>
+                                        </div>
+                                    )}
+                                <div className="d-flex justify-content-center my-1">
+                                    {/* 2. System message */}
+                                    <span className={`small text-center px-2 py-1 rounded ${theme === 'dark' ? 'text-white opacity-75' : 'text-muted'}`} 
+                                        style={{ backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }}>
+                                            **{msg.message}** {/* Il testo formattato viene dal backend */}
+                                    </span>
+                                </div>
+                            </div>
+                            );
+                        }
+
                         const isMine = user && msg.username === user.username;
                         const userColor = getColorFromUsername(msg.username);
                         let bubbleClass = isMine ? "bg-success text-white" : (theme === 'dark' ? "bg-secondary text-white" : "bg-white text-dark");

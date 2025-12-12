@@ -2,6 +2,7 @@ use axum::{Extension, Json, extract::{State, Query, Path}, http::StatusCode, res
 use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 use chrono::Local;
+use colored::*;
 
 use crate::{models::*, error::AppError, state::AppState};
 
@@ -152,6 +153,14 @@ pub async fn accept(Extension(user): Extension<User>, State(state): State<AppSta
     sqlx::query("INSERT INTO user_team (id_user, id_team) VALUES (?1, ?2)").bind(user.id).bind(team_id).execute(&mut *tx).await?;
     sqlx::query("DELETE FROM invite WHERE id_user = ?1 AND id_team = ?2").bind(user.id).bind(team_id).execute(&mut *tx).await?;
     tx.commit().await?;
+
+    // send notification message user joined team
+    let system_message = format!(r#"{{"type": "system", "message": {} è entrato nel gruppo", "username": "{}", "event": "joined"}}"#, user.username, user.username);
+    if let Some(tx) = state.chat_rooms.get(&team_id) {
+        let _ = tx.send(system_message.clone());
+        println!("{} {}", "[INFO]".cyan(), system_message);
+    }
+
     Ok(Json(json!({ "success": true, "message": "Invito accettato!" })))
 }
 

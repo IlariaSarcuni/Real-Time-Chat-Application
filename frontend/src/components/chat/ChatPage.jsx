@@ -71,7 +71,9 @@ function ChatPage({ user }) {
             try {
                 const data = JSON.parse(e.data);
 
-                if(data.type === "chat") {
+                if(data.type === "chat") {  // standard chat messages
+                    setMessages(prev => [...prev, data]);
+                } else if(data.type === "system") { // someone joins or leaves team
                     setMessages(prev => [...prev, data]);
                 } else if (data.type === "online") {
                     setOnlineMembers(prev => Array.from(new Set([...prev, data.username])));
