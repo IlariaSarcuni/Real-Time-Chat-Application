@@ -113,9 +113,30 @@ pub async fn leave_team(Extension(user): Extension<User>, State(state): State<Ap
     if team_id == 0 { return Err(AppError::BadRequest("ID Gruppo invalido.".into())); }
 
     let mut tx = state.pool.begin().await?;
+    // Se ultimo membro ad uscire allora cancella pure il gruppo e i messaggi dalla tabella
+    let (members_count,): (i64,) =sqlx::query_as("SELECT COUNT(*) FROM user_team WHERE id_team = ?1").bind(team_id).fetch_one(&mut *tx).await?;
 
-    sqlx::query("DELETE FROM user_team WHERE id_user = ?1 AND id_team = ?2").bind(user.id).bind(team_id).execute(&state.pool).await?;
-
+    //
+    sqlx::query("DELETE FROM user_team WHERE id_user = ?1 AND id_team = ?2").bind(user.id).bind(team_id).execute(&mut *tx).await?;
+    if members_count==1
+    {
+        sqlx::query("DELETE FROM team WHERE id= ?1").bind(team_id).execute(&mut *tx).await?;
+        //cancello i messaggi
+        sqlx::query("DELETE FROM message WHERE id_team= ?1").bind(team_id).execute(&mut *tx).await?;
+        
+        tx.commit().await?;
+        
+         // send notification message user left team
+        let system_message = format!(r#"{{"type": "system", "message": "{} ha abbandonato il gruppo", "username": "{}", "event": "left"}}"#, user.username, user.username);
+        if let Some(tx) = state.chat_rooms.get(&team_id) {
+            let _ = tx.send(system_message.clone());
+            println!("{} {}", "[INFO]".cyan(), system_message);
+        }
+        return Ok(Json(json!({
+            "success": true,
+            "message": "Hai abbandonato il gruppo."
+        })));
+    }
     let system_message_db = format!("{} ha abbandonato il gruppo", user.username);
     sqlx::query("INSERT INTO message (id_user, id_team, message, data, ora, type) VALUES (?1, ?2, ?3, CURRENT_DATE, CURRENT_TIME, 'system')")
         .bind(user.id).bind(team_id).bind(&system_message_db).execute(&mut *tx).await?;
