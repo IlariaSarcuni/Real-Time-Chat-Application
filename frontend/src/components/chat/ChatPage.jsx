@@ -89,7 +89,7 @@ function ChatPage({ user }) {
         return () => { 
             if (ws.readyState === 1) ws.close(); 
         };
-    }, [currentTeam]);
+    }, [currentTeam, user.username]);
 
     // --- HANDLERS ---
     const handleSend = async (e) => {
