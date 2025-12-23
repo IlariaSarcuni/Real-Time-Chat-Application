@@ -71,6 +71,10 @@ function ChatPage({ user }) {
             try {
                 const data = JSON.parse(e.data);
 
+                if(!data.data) {    // can be undefined for 'system' messages
+                    data.data = new Date().toISOString().split("T")[0];
+                }
+
                 if(data.type === "chat") {  // standard chat messages
                     setMessages(prev => [...prev, data]);
                 } else if(data.type === "system") { // someone joins or leaves team
