@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
-import { Container, Row, Col, Button, ListGroup, ButtonGroup } from 'react-bootstrap';
+import { Badge, Button, Container, Row, Col, ListGroup, ButtonGroup } from 'react-bootstrap';
 import API from '../../API';
 import ThemeContext from '../../contexts/ThemeContext';
 import "../../stylesheets/ChatPage.css";
@@ -16,6 +16,7 @@ function ChatPage({ user }) {
     const [currentTeam, setCurrentTeam] = useState(null);
     const [messages, setMessages] = useState([]);
     const [onlineMembers, setOnlineMembers] = useState([]);
+    const [notifications, setNotifications] = useState({}); // {id_team: count}
 
     // --- STATI INPUT & UI ---
     const [newMessage, setNewMessage] = useState("");
@@ -38,6 +39,7 @@ function ChatPage({ user }) {
     const refreshAllData = useCallback(() => {
         API.getTeams().then(ts => setTeams(Array.isArray(ts) ? ts : [])).catch(e => console.error(e));
         API.getInvites().then(inv => setInvites(Array.isArray(inv) ? inv : [])).catch(e => console.error(e));
+        API.getUnreadCounts().then(data => setNotifications(data)).catch(e => console.error(e));
     }, []);
 
     useEffect(() => {
@@ -75,8 +77,18 @@ function ChatPage({ user }) {
                     data.data = new Date().toISOString().split("T")[0];
                 }
 
+                // TODO: fix notifications if your own message
                 if(data.type === "chat") {  // standard chat messages
-                    setMessages(prev => [...prev, data]);
+                    if (currentTeam && data.team_id === currentTeam.id) {
+                        setMessages(prev => [...prev, data]);
+                    } else {  
+                        if (data.username !== user.username) {
+                            setNotifications(prev => ({
+                                ...prev, 
+                                [data.team_id]: (prev[data.team_id] || 0) + 1
+                            }));
+                        }
+                    }
                 } else if(data.type === "system") { // someone joins or leaves team
                     setMessages(prev => [...prev, data]);
                 } else if (data.type === "online") {
@@ -110,6 +122,24 @@ function ChatPage({ user }) {
             await API.createTeam(newTeamName);
             setShowCreateModal(false); setNewTeamName(""); refreshAllData();
         } catch (err) { alert(err.message); }
+    };
+
+    const handleSelectTeam = async (team) => {
+        setCurrentTeam(team);
+        setErrorMsg("");
+    
+        if (notifications[team.id] > 0) {
+            setNotifications(prev => ({
+                ...prev,
+                [team.id]: 0
+            }));
+    
+            try {
+                await API.markAsRead(team.id);
+            } catch (err) {
+                console.error("Errore nel segnare messaggio come letto:", err);
+            }
+        }
     };
 
     const handleInvite = async () => {
@@ -173,10 +203,15 @@ function ChatPage({ user }) {
                     <div className="flex-grow-1 overflow-auto">
                         <ListGroup variant="flush">
                             {teams.map(team => (
-                                <ListGroup.Item key={team.id} action active={currentTeam?.id === team.id} onClick={() => setCurrentTeam(team)}
-                                    className="border-0 py-3"
+                                <ListGroup.Item key={team.id} action active={currentTeam?.id === team.id} onClick={() => handleSelectTeam(team)}
+                                    className="border-0 py-3 d-flex justify-content-between align-items-center"
                                     style={{ backgroundColor: currentTeam?.id === team.id ? '' : 'transparent', color: theme === 'dark' && currentTeam?.id !== team.id ? 'white' : '' }}>
-                                    <i className="bi bi-hash opacity-50"></i> {team.name}
+                                    <span>
+                                        <i className="bi bi-hash opacity-50"></i> {team.name}
+                                    </span>
+                                    {notifications[team.id] > 0 && (
+                                        <Badge bg="danger" pill>{notifications[team.id]}</Badge>
+                                    )}
                                 </ListGroup.Item>
                             ))}
                         </ListGroup>

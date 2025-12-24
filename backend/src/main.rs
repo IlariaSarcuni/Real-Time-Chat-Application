@@ -71,6 +71,9 @@ async fn main() {
         .route("/decline", post(h_team::decline).route_layer(from_fn(auth_middleware)))
         .route("/send", post(h_team::send_message).route_layer(from_fn(auth_middleware)))
         .route("/messages", get(h_team::get_messages).route_layer(from_fn(auth_middleware)))
+        // Notifications
+        .route("/unread-notifications", get(h_team::get_unread_notifications).route_layer(from_fn(auth_middleware)))
+        .route("/mark-read/{team_id}", post(h_team::mark_as_read).route_layer(from_fn(auth_middleware)))
         // WebSocket
         .route("/ws/team/{team_id}", get(websocket_handler).route_layer(from_fn(auth_middleware)))
         

@@ -87,9 +87,26 @@ const getUserInfo = async () => {
 }
 
 // --- GRUPPI E MESSAGGI ---
-
 const getTeams = async () => {
     const response = await fetch(`${SERVER_URL}/list/teams`, { method: 'GET', credentials: 'include' });
+    return await handleResponse(response);
+};
+
+const getUnreadCounts = async () => {
+    const response = await fetch(`${SERVER_URL}/unread-notifications`, { 
+        method: 'GET', 
+        credentials: 'include' 
+    });
+    if (response.ok) return await response.json();
+    return {};
+};
+
+const markAsRead = async (teamId) => {
+    const response = await fetch(`${SERVER_URL}/mark-read/${teamId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+    });
     return await handleResponse(response);
 };
 
@@ -191,7 +208,7 @@ const API = {
     register, logIn, logOut, getUserInfo,
     getTeams, getOnlineMembers, getMessages, sendMessage, createTeam, renameTeam, leaveTeam,
     inviteUser, getInvites, acceptInvite, declineInvite,
-    getTeamMembers
+    getUnreadCounts, getTeamMembers, markAsRead
 };
 
 export default API;

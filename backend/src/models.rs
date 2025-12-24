@@ -10,6 +10,12 @@ pub struct Team {
 }
 
 #[derive(Serialize, FromRow)]
+pub struct UnreadCount {
+    pub id_team: i64,
+    pub notification: i64,
+}
+
+#[derive(Serialize, FromRow)]
 pub struct MessageResponse {
     pub username: String,
     pub message: String,

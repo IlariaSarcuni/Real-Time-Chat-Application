@@ -85,6 +85,33 @@ pub async fn get_online_members(
     (StatusCode::OK, Json(online_members)).into_response()
 }
 
+pub async fn get_unread_notifications(Extension(user): Extension<User>, State(state): State<AppState>) -> Result<Json<HashMap<i64, i64>>, AppError> {
+    let rows: Vec<UnreadCount> = sqlx::query_as(r#"
+        SELECT ut.id_team, COUNT(m.id_message) as notification
+        FROM user_team ut
+        JOIN message m ON m.id_team = ut.id_team
+        WHERE ut.id_user = ?1 AND (
+            m.data > ut.last_data 
+            OR (m.data = ut.last_data AND m.ora > ut.last_ora)
+        )
+        GROUP BY ut.id_team
+    "#).bind(user.id).fetch_all(&state.pool).await?;
+
+    let mut counts = HashMap::new();
+    for row in rows {
+        counts.insert(row.id_team, row.notification as i64);
+    }
+    Ok(Json(counts))
+}
+
+pub async fn mark_as_read(Extension(user): Extension<User>, State(state): State<AppState>,
+    Path(team_id): Path<i64>) -> Result<impl IntoResponse, AppError> {
+    sqlx::query("UPDATE user_team SET last_data = CURRENT_DATE, last_ora = CURRENT_TIME WHERE id_user = ?1 AND id_team = ?2")
+        .bind(user.id).bind(team_id).execute(&state.pool).await?;
+
+    Ok(StatusCode::OK)
+}
+
 // --- AZIONI TEAM ---
 pub async fn create_team(Extension(user): Extension<User>, State(state): State<AppState>, Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
     let name = body.get("name").and_then(|v| v.as_str()).unwrap_or("");
@@ -238,6 +265,7 @@ pub async fn send_message(Extension(user): Extension<User>, State(state): State<
 
     let msg_payload = json!({
         "username": user.username,
+        "team_id": team_id,
         "message": msg,
         "ora": Local::now().format("%H:%M:%S").to_string(),
         "data": Local::now().format("%Y-%m-%d").to_string(),
