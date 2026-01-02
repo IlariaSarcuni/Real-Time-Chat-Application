@@ -145,6 +145,44 @@ const createTeam = async (name) => {
     });
     return await handleResponse(response);
 };
+const createPrivateChat = async (other_user_id) => {
+    const response = await fetch(`${SERVER_URL}/create/private`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ user_id: other_user_id })
+    });
+    return await handleResponse(response);
+};
+
+const getChatList = async () => {
+    const response = await fetch(`${SERVER_URL}/list/private`, {
+        method: 'GET',
+        credentials: 'include',
+    });
+    return await handleResponse(response);
+};
+
+const getChatMessage = async (id) => {
+    const response = await fetch(`${SERVER_URL}/chat/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ chat_id: id })
+    });
+    return await handleResponse(response);
+};
+
+const sendPrivateMessage = async (id,msg,from,to) => {
+    const response = await fetch(`${SERVER_URL}/chat/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ chat_id: id , message:msg, from:from,to:to })
+    });
+    return await handleResponse(response);
+};
+
 
 const renameTeam = async (teamId, newName) => {
     const response = await fetch(`${SERVER_URL}/rename`, {
@@ -208,7 +246,8 @@ const API = {
     register, logIn, logOut, getUserInfo,
     getTeams, getOnlineMembers, getMessages, sendMessage, createTeam, renameTeam, leaveTeam,
     inviteUser, getInvites, acceptInvite, declineInvite,
-    getUnreadCounts, getTeamMembers, markAsRead
+    getUnreadCounts, getTeamMembers, markAsRead,
+    createPrivateChat,getChatList,getChatMessage,sendPrivateMessage
 };
 
 export default API;

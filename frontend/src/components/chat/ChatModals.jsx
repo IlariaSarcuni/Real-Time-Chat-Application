@@ -14,6 +14,19 @@ export function CreateTeamModal({ show, onHide, value, onChange, onSubmit }) {
         </Modal>
     );
 }
+export function CreateChatModal({ show, onHide, value, onChange, onSubmit }) {
+    return (
+        <Modal show={show} onHide={onHide} centered>
+            <Modal.Header closeButton><Modal.Title>Nuova chat</Modal.Title></Modal.Header>
+            <Modal.Body>
+                <Form.Control type="text" placeholder="id utente..." value={value} onChange={(e) => onChange(e.target.value)} autoFocus />
+            </Modal.Body>
+            <Modal.Footer>
+                <Button variant="primary" onClick={onSubmit} disabled={!value.trim()}>Crea</Button>
+            </Modal.Footer>
+        </Modal>
+    );
+}
 
 export function InviteModal({ show, onHide, value, onChange, onSubmit }) {
     return (

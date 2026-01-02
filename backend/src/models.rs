@@ -10,6 +10,28 @@ pub struct Team {
 }
 
 #[derive(Serialize, FromRow)]
+pub struct PrivateAssoc{
+    pub id:i64,
+    pub id_user1:i64,
+    pub id_user2:i64
+}
+
+#[derive(Serialize, FromRow,Debug)]
+pub struct PrivateMessage{
+    pub id_chat:i64,
+    pub message:String,
+    pub data:String,
+    pub ora:String,
+    pub name1:String,
+    pub name2:String,
+    #[sqlx(rename = "type")]
+    #[serde(rename = "type")]
+    pub msg_type:String,
+}
+
+
+
+#[derive(Serialize, FromRow)]
 pub struct UnreadCount {
     pub id_team: i64,
     pub notification: i64,

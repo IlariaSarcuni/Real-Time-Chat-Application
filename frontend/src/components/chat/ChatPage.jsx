@@ -4,8 +4,8 @@ import API from '../../API';
 import ThemeContext from '../../contexts/ThemeContext';
 import "../../stylesheets/ChatPage.css";
 
-import ChatWindow from './ChatWindow';
-import { CreateTeamModal, InviteModal, MembersModal, RenameModal } from './ChatModals';
+import {ChatWindow,ChatPrivateWindow} from './ChatWindow';
+import { CreateChatModal, CreateTeamModal, InviteModal, MembersModal, RenameModal } from './ChatModals';
 
 function ChatPage({ user }) {
     const theme = useContext(ThemeContext);
@@ -17,6 +17,12 @@ function ChatPage({ user }) {
     const [messages, setMessages] = useState([]);
     const [onlineMembers, setOnlineMembers] = useState([]);
     const [notifications, setNotifications] = useState({}); // {id_team: count}
+
+            //DATI CHAT
+    const [chats,setChats] = useState([]);
+    const [currentChat,setCurrentChat] = useState([]);
+    const [chatMessages,setChatMessages]= useState([]);
+
 
     // --- STATI INPUT & UI ---
     const [newMessage, setNewMessage] = useState("");
@@ -35,11 +41,17 @@ function ChatPage({ user }) {
     const [showRenameModal, setShowRenameModal] = useState(false);
     const [renameValue, setRenameValue] = useState("");
 
+    const [showCreatePrivateModal,setShowCreatePrivateModal]=useState(false);
+    const [addChat,setAddChat]=useState("");
     // --- EFFETTI & API ---
     const refreshAllData = useCallback(() => {
         API.getTeams().then(ts => setTeams(Array.isArray(ts) ? ts : [])).catch(e => console.error(e));
         API.getInvites().then(inv => setInvites(Array.isArray(inv) ? inv : [])).catch(e => console.error(e));
         API.getUnreadCounts().then(data => setNotifications(data)).catch(e => console.error(e));
+
+        //
+        API.getChatList().then(c => setChats(Array.isArray(c) ? c : [])).catch(e => console.error(e));
+
     }, []);
 
     useEffect(() => {
@@ -107,6 +119,12 @@ function ChatPage({ user }) {
         };
     }, [currentTeam, user.username]);
 
+    //Get current chat messages
+    useEffect(()=>{
+        if(!currentChat) return;
+        API.getChatMessage(currentChat).then(c => setChatMessages(Array.isArray(c) ? c : [])).catch(e => console.error(e));
+    },[currentChat])
+
     // --- HANDLERS ---
     const handleSend = async (e) => {
         e.preventDefault();
@@ -116,6 +134,16 @@ function ChatPage({ user }) {
             setNewMessage("");
         } catch (err) { console.error(err); setErrorMsg("Errore invio"); }
     };
+    const handleSendPrivate = async(e)=>
+    {
+        e.preventDefault();
+        if (!newMessage.trim() || !currentChat) return;
+        try {
+            const to = chatMessages?.[0]?.name2 ?? "NULL";
+            await API.sendPrivateMessage(currentChat, newMessage,user.username,to);   //TODO: dare un occhiata chatMessages[0].name2
+            setNewMessage("");
+        } catch (err) { console.error(err); setErrorMsg("Errore invio"); }
+    }
 
     const handleCreateTeam = async () => {
         try {
@@ -123,11 +151,23 @@ function ChatPage({ user }) {
             setShowCreateModal(false); setNewTeamName(""); refreshAllData();
         } catch (err) { alert(err.message); }
     };
+    const handleCreatePrivate = async () => {
+        try {
+            await API.createPrivateChat(parseInt(addChat,10));
+            setShowCreateModal(false); setAddChat(""); refreshAllData();
+
+            API.getChatMessage().then(c => setChats(Array.isArray(c) ? c : [])).catch(e => console.error(e));
+
+        } catch (err) { alert(err.message); }
+    };
 
     const handleSelectTeam = async (team) => {
+        setCurrentChat(null);
         setCurrentTeam(team);
         setErrorMsg("");
-    
+        
+
+        
         if (notifications[team.id] > 0) {
             setNotifications(prev => ({
                 ...prev,
@@ -140,6 +180,29 @@ function ChatPage({ user }) {
                 console.error("Errore nel segnare messaggio come letto:", err);
             }
         }
+    };
+
+    const handleSelectChat = async (chat_id) => {
+        setCurrentTeam(null);
+        setErrorMsg("");
+    
+        setCurrentChat(chat_id);
+
+        //prendo tutti i messaggi e li visualizzo
+
+
+        // if (notifications[team.id] > 0) {
+        //     setNotifications(prev => ({
+        //         ...prev,
+        //         [team.id]: 0
+        //     }));
+    
+        //     try {
+        //         await API.markAsRead(team.id);
+        //     } catch (err) {
+        //         console.error("Errore nel segnare messaggio come letto:", err);
+        //     }
+        // }
     };
 
     const handleInvite = async () => {
@@ -198,7 +261,10 @@ function ChatPage({ user }) {
                     <div className="p-3 d-flex justify-content-between align-items-center">
                         <h6 className={`m-0 fw-bold ${theme === 'dark' ? 'text-light' : 'text-muted'}`}>GRUPPI</h6>
                         <Button variant="outline-primary" size="sm" onClick={() => setShowCreateModal(true)}><i className="bi bi-plus-lg"></i></Button>
+                        <Button variant="outline-primary" size="sm" onClick={() => setShowCreatePrivateModal(true)}><i className="bi bi-person-add"></i></Button>
                     </div>
+                    
+                    <p>--------------------TEAM</p>
 
                     <div className="flex-grow-1 overflow-auto">
                         <ListGroup variant="flush">
@@ -216,9 +282,25 @@ function ChatPage({ user }) {
                             ))}
                         </ListGroup>
                     </div>
+                    <p>--------------------CHAT</p>
+                    <div className="flex-grow-1 overflow-auto">
+                        <ListGroup variant="flush">
+                            {chats.map(chat => (
+                                <ListGroup.Item key={chat.id} action active={currentChat?.id === chat.id} onClick={() => handleSelectChat(chat.id)}
+                                    className="border-0 py-3 d-flex justify-content-between align-items-center"
+                                    style={{ backgroundColor: currentChat?.id === chat.id ? '' : 'transparent', color: theme === 'dark' && currentChat?.id !== chat.id ? 'white' : '' }}>
+                                    <span>
+                                        <i className="bi bi-person-fill opacity-50"></i> {chat.id}
+                                    </span>
+                                </ListGroup.Item>
+                            ))}
+                        </ListGroup>
+                    </div>
                 </Col>
 
                 {/* 2. CHAT WINDOW */}
+                {
+                currentTeam!=null&&currentChat==null?
                 <ChatWindow 
                     currentTeam={currentTeam}
                     messages={messages}
@@ -234,9 +316,27 @@ function ChatPage({ user }) {
                     onShowInvite={() => setShowInviteModal(true)}
                     onShowRename={() => { setRenameValue(currentTeam.name); setShowRenameModal(true); }}
                 />
+                :
+                <ChatPrivateWindow 
+                    currentChat={currentChat}
+                    messages={chatMessages}
+                    user={user}
+                    errorMsg={errorMsg}
+                    setErrorMsg={setErrorMsg}
+                    newMessage={newMessage} //TODO: da gestire
+                    setNewMessage={setNewMessage} //TODO: da gestire
+                    onlineMembers={onlineMembers} //TODO: da gestire
+                    onSend={handleSendPrivate}
+                    onLeave={handleLeave} //TODO: da gestire
+                    onShowMembers={handleShowMembers} //TODO: da togliere
+                    onShowInvite={() => setShowInviteModal(true)} //TODO: da gestire
+                    onShowRename={() => { setRenameValue(currentTeam.name); setShowRenameModal(true); }} //TODO: da eliminare
+                />
+                }
             </Row>
 
             {/* 3. MODALI */}
+            <CreateChatModal show={showCreatePrivateModal} onHide={() => setShowCreatePrivateModal(false)} value={addChat} onChange={setAddChat} onSubmit={handleCreatePrivate} />
             <CreateTeamModal show={showCreateModal} onHide={() => setShowCreateModal(false)} value={newTeamName} onChange={setNewTeamName} onSubmit={handleCreateTeam} />
             <InviteModal show={showInviteModal} onHide={() => setShowInviteModal(false)} value={inviteUsername} onChange={setInviteUsername} onSubmit={handleInvite} />
             <MembersModal show={showMembersModal} onHide={() => setShowMembersModal(false)} members={members} onlineMembers={onlineMembers} user={user} />

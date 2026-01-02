@@ -22,7 +22,7 @@ use colored::*;
 use crate::{
     state::AppState,
     models::User,
-    handlers::{auth as h_auth, team as h_team},
+    handlers::{auth as h_auth, team as h_team,personal as h_personal},
     ws::websocket_handler
 };
 
@@ -57,6 +57,12 @@ async fn main() {
         .route("/login", post(h_auth::login))
         .route("/logout", get(h_auth::log_out))
         .route("/me", get(h_auth::get_me).route_layer(from_fn(auth_middleware)))
+        // Private Chat
+        .route("/create/private", post(h_personal::create_chat).route_layer(from_fn(auth_middleware)))
+        .route("/list/private", get(h_personal::get_chat_list).route_layer(from_fn(auth_middleware)))
+        .route("/chat/messages", post(h_personal::get_chat_messages).route_layer(from_fn(auth_middleware)))
+        .route("/chat/send", post(h_personal::send_chat_message).route_layer(from_fn(auth_middleware)))
+
         // Team Routes
         .route("/list/teams", get(h_team::get_teams).route_layer(from_fn(auth_middleware)))
         .route("/list/invites", get(h_team::get_list_invites).route_layer(from_fn(auth_middleware)))
