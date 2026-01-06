@@ -15,21 +15,31 @@ pub async fn websocket_handler(
     ws: WebSocketUpgrade,
     Extension(user): Extension<User>,
     State(state): State<AppState>,
-    Path(team_id): Path<i64>
+    uri: axum::http::Uri,       // understand if team or private
+    Path(id): Path<i64>    // generic id
 ) -> impl IntoResponse {
-    
-    let is_member = sqlx::query_scalar::<_, i64>("SELECT id_user FROM user_team WHERE id_user = ?1 AND id_team = ?2")
-        .bind(user.id)
-        .bind(team_id)
+    let path = uri.path();
+
+    if path.contains("/ws/team") {
+        let is_member = sqlx::query_scalar::<_, i64>("SELECT id_user FROM user_team WHERE id_user = ?1 AND id_team = ?2")
+        .bind(user.id).bind(id)
         .fetch_one(&state.pool)
         .await;
 
-    if is_member.is_err() {
-        return (StatusCode::FORBIDDEN, "Accesso negato: Non sei membro del gruppo").into_response();
+        if is_member.is_err() {
+            return (StatusCode::FORBIDDEN, "Accesso negato: Non sei membro del gruppo").into_response();
+        }
+        println!("{} {} connesso al team {}", "[INFO]".cyan(), user.username, id);
+    } else {    // private
+        let is_participant = sqlx::query_scalar::<_, i64>("SELECT id FROM private_chats_assoc WHERE id = ?1 AND (id_user1 = ?2 OR id_user2 = ?2)")
+            .bind(id).bind(user.id).fetch_one(&state.pool).await;
+        if is_participant.is_err() { 
+            return (StatusCode::FORBIDDEN, "Accesso negato: Non sei partecipante di questa chat").into_response();
+        }
+        println!("{} {} partecipa alla chat {}", "[INFO]".cyan(), user.username, id);
     }
 
-    println!("{} {} connesso al team {}", "[INFO]".cyan(), user.username, team_id);
-    ws.on_upgrade(move |socket| handle_socket(socket, user, state, team_id))
+    ws.on_upgrade(move |socket| handle_socket(socket, user, state, id))
 }
 
 async fn handle_socket(socket: WebSocket, user: User, state: AppState, team_id: i64) {
