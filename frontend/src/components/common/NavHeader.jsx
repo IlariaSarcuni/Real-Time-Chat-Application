@@ -31,7 +31,7 @@ function NavHeader(props) {
                         {/* Username */}
                         {props.loggedIn && props.user && (
                             <span className="text-white opacity-75 fw-semibold d-none d-md-block border-end pe-3">
-                                Ciao, {props.user.username} | user id : {props.user.id}
+                                Ciao, {props.user.username}
                             </span>
                         )}
 
