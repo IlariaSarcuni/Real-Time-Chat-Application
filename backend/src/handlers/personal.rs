@@ -47,10 +47,21 @@ pub async fn get_chat_messages(Extension(user): Extension<User>, State(state): S
 
 pub async fn get_chat_list(Extension(user): Extension<User>, State(state): State<AppState>)-> Result<impl IntoResponse, AppError>
 {
-    let rows: Vec<PrivateAssoc>= sqlx::query_as("SELECT id,id_user1,id_user2 FROM private_chats_assoc WHERE id_user1=?1 OR id_user2=?1")
-    .bind(user.id)
-    .fetch_all(&state.pool).await?;
-
+    let rows: Vec<ChatListRow> = sqlx::query_as("SELECT c.id,
+        CASE 
+            WHEN c.id_user1 = ?1 THEN u2.username ELSE u1.username 
+        END as other_username,
+        CASE 
+            WHEN c.id_user1 = ?1 THEN c.id_user2 ELSE c.id_user1
+        END as other_user_id
+        FROM private_chats_assoc c
+        JOIN user u1 ON c.id_user1 = u1.id
+        JOIN user u2 ON c.id_user2 = u2.id
+        WHERE c.id_user1 = ?1 OR c.id_user2 = ?1")
+        .bind(user.id)
+        .fetch_all(&state.pool)
+        .await?;
+    
     Ok(Json(rows))
 }
 

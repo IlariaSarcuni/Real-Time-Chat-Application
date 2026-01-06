@@ -35,7 +35,8 @@ async fn main() {
     let state = AppState::new(pool.clone());
     
     // Config Sessione
-    let session_config = SessionConfig::default().with_table_name("session_table").with_key(Key::generate());
+    let session_config = SessionConfig::default().with_table_name("session_table")
+        .with_key(Key::generate()).with_cookie_same_site(axum_session::SameSite::Lax);;
     let session_store = SessionStore::<SessionSqlitePool>::new(Some(pool.clone().into()), session_config).await.unwrap();
     let auth_config = AuthConfig::<i64>::default().with_anonymous_user_id(Some(1));
 

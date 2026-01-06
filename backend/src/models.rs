@@ -11,9 +11,16 @@ pub struct Team {
 
 #[derive(Serialize, FromRow)]
 pub struct PrivateAssoc{
-    pub id:i64,
-    pub id_user1:i64,
-    pub id_user2:i64
+    pub id: i64,
+    pub id_user1: i64,
+    pub id_user2: i64
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct ChatListRow {
+    pub id: i64,
+    pub other_username: String,
+    pub other_user_id: i64,
 }
 
 #[derive(Serialize, FromRow,Debug)]
@@ -28,8 +35,6 @@ pub struct PrivateMessage{
     #[serde(rename = "type")]
     pub msg_type:String,
 }
-
-
 
 #[derive(Serialize, FromRow)]
 pub struct UnreadCount {

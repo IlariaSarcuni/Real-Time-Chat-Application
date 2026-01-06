@@ -44,11 +44,13 @@ function ChatPage({ user }) {
     const chatBg = theme === 'dark' ? '#212529' : '#e5ddd5';    // move
     // --- EFFETTI & API ---
     const refreshAllData = useCallback(() => {
+        if (!user) return;
+
         API.getTeams().then(ts => setTeams(Array.isArray(ts) ? ts : [])).catch(e => console.error(e));
         API.getChats().then(c => setChats(Array.isArray(c) ? c : [])).catch(e => console.error(e));
         API.getInvites().then(inv => setInvites(Array.isArray(inv) ? inv : [])).catch(e => console.error(e));
         API.getUnreadCounts().then(data => setNotifications(data)).catch(e => console.error(e));
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         refreshAllData();
@@ -303,7 +305,7 @@ function ChatPage({ user }) {
                                     style={{ backgroundColor: activeRoom.id === chat.id ? '' : 'transparent', color: theme === 'dark' && activeRoom.id !== chat.id ? 'white' : '' }}
                                     >
                                         <span className="text-truncate small">
-                                            <i className="bi bi-hash me-1"></i> {chat.id}
+                                            <i className="bi bi-hash me-1"></i> {chat.other_username}
                                         </span>
                                 </ListGroup.Item>
                             ))}
