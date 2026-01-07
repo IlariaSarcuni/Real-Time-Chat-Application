@@ -120,7 +120,9 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
                             );
                         }
 
-                        const isMine = user && msg.username === user.username;
+                        // Check if the message is mine or of other users
+                        const senderName = msg.username || msg.name1;
+                        const isMine = user && senderName === user.username;
                         const userColor = getColorFromUsername(msg.username, theme);
                         let bubbleClass = isMine ? "bg-success text-white" : (theme === 'dark' ? "bg-secondary text-white" : "bg-white text-dark");
 
@@ -130,7 +132,7 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
                                 <div className={`mb-2 d-flex flex-column ${isMine ? 'align-items-end' : 'align-items-start'}`}>
                                     <div className={`p-2 px-3 rounded-3 shadow-sm border ${bubbleClass}`}
                                         style={{ maxWidth: '75%', minWidth: '120px', position: 'relative', border: theme === 'dark' ? '1px solid #444' : '' }}>
-                                        {!isMine && <div className="fw-bold small mb-1" style={{ color: userColor }}>~ {msg.username}</div>}
+                                        {!isMine && <div className="fw-bold small mb-1" style={{ color: userColor }}>~ {senderName}</div>}
                                         <div style={{ paddingRight: '45px', wordWrap: 'break-word' }}>{msg.message}</div>
                                         <div className={`small position-absolute bottom-0 end-0 pe-2 pb-1 ${isMine || theme === 'dark' ? 'text-light opacity-75' : 'text-muted'}`} style={{ fontSize: '0.65rem' }}>
                                             {msg.ora?.substring(0, 5)}

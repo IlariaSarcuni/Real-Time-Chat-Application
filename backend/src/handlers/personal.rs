@@ -82,8 +82,8 @@ pub async fn send_chat_message(Extension(user): Extension<User>, State(state): S
         return Err(AppError::BadRequest("Impossibile inviare un messaggio vuoto".into()));
     }
 
-    // Retrieve chat info (two users)
-    let (n1, n2): (String, String) = sqlx::query_as(
+    // Retrieve chat info
+    let (name1, name2): (String, String) = sqlx::query_as(
         r#"
         SELECT u1.username, u2.username 
         FROM private_chats_assoc c
@@ -98,6 +98,10 @@ pub async fn send_chat_message(Extension(user): Extension<User>, State(state): S
     .await?
     .ok_or(AppError::Forbidden)?;
 
+    // NOTE: understand who is the sender and who is the receiver
+    let sender_name = &user.username;   
+    let receiver_name = if sender_name == &name1 { &name2 } else { &name1 }; 
+
     // Insert new chat message
     sqlx::query(
         r#"
@@ -107,17 +111,20 @@ pub async fn send_chat_message(Extension(user): Extension<User>, State(state): S
     )
     .bind(chat_id)
     .bind(message)
-    .bind(n1)
-    .bind(n2)
+    .bind(sender_name)
+    .bind(receiver_name)
     .execute(&state.pool)
     .await?;
 
-    // Notify via WebSocket
+    // Send via WebSocket
     let message_payload = json!({
         "type": "chat",
-        "username": user.username,
+        "chat_id": chat_id, 
         "message": message,
-        "chat_id": chat_id
+        "username": user.username,  // for compatibility with team
+        "name1": user.username,
+        "data": chrono::Local::now().format("%Y-%m-%d").to_string(),
+        "ora": chrono::Local::now().format("%H:%M:%S").to_string(),
     }).to_string();
 
     if let Some(tx) = state.chat_rooms.get(&chat_id) {

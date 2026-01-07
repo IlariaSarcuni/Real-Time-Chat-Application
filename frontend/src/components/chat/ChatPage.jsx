@@ -118,15 +118,17 @@ function ChatPage({ user }) {
                     data.data = new Date().toISOString().split("T")[0];
                 }
 
+                const incomingId = data.chat_id || data.team_id;
+
                 // TODO: fix notifications if your own message
                 if(data.type === "chat") {  // standard chat messages
-                    if (activeRoom && data.team_id === activeRoom.id) {
+                    if (activeRoom && incomingId === activeRoom.id) {
                         setMessages(prev => [...prev, data]);
                     } else {  
                         if (data.username !== user.username) {
                             setNotifications(prev => ({
                                 ...prev, 
-                                [data.team_id]: (prev[data.team_id] || 0) + 1
+                                [incomingId]: (prev[incomingId] || 0) + 1
                             }));
                         }
                     }
