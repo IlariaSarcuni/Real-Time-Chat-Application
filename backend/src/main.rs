@@ -61,7 +61,7 @@ async fn main() {
         // Private Chat
         .route("/create/private", post(h_personal::create_chat).route_layer(from_fn(auth_middleware)))
         .route("/list/private", get(h_personal::get_chat_list).route_layer(from_fn(auth_middleware)))
-        .route("/chat/messages", post(h_personal::get_chat_messages).route_layer(from_fn(auth_middleware)))
+        .route("/chat/messages/{chat_id}", get(h_personal::get_chat_messages).route_layer(from_fn(auth_middleware)))
         .route("/chat/send", post(h_personal::send_chat_message).route_layer(from_fn(auth_middleware)))
 
         // Team Routes

@@ -49,7 +49,6 @@ async function handleResponse(response) {
 }
 
 // --- AUTH & USER ---
-
 const register = async (credentials) => {
     const response = await fetch(`${SERVER_URL}/register`, {
         method: 'POST',
@@ -182,13 +181,8 @@ const getChats = async () => {
     return await handleResponse(response);
 };
 
-const getChatMessages = async (id) => {
-    const response = await fetch(`${SERVER_URL}/chat/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ chat_id: id })
-    });
+const getChatMessages = async (chatId) => {
+    const response = await fetch(`${SERVER_URL}/chat/messages/${chatId}`, { method: 'GET', credentials: 'include' });
     return await handleResponse(response);
 };
 
