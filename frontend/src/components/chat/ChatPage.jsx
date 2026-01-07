@@ -120,7 +120,7 @@ function ChatPage({ user }) {
 
                 const incomingId = data.chat_id || data.team_id;
 
-                // TODO: fix notifications if your own message
+                // TODO: fix notifications if it is your own message
                 if(data.type === "chat") {  // standard chat messages
                     if (activeRoom && incomingId === activeRoom.id) {
                         setMessages(prev => [...prev, data]);
