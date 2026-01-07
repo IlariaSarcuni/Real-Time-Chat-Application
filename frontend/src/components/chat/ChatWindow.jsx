@@ -21,7 +21,7 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
     const isTeam = activeRoom.type === 'team';
     const displayName = isTeam 
         ? (activeRoom.data?.name || "Gruppo")
-        : (activeRoom.data?.otherUser || `Utente ${activeRoom.id}`);
+        : (activeRoom.data?.other_username || `Utente ${activeRoom.id}`);
 
     // Auto-scroll
     useEffect(() => {
@@ -52,7 +52,7 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
                             <span className="rounded-circle me-1" style={{ width: '8px', height: '8px', backgroundColor: onlineMembers.length > 0 ? '#28a745' : '#6c757d' }}></span>
                             <span className={onlineMembers.length > 0 ? "text-success" : "text-muted"}>
                                 {isTeam ? (`${onlineMembers.length} ${onlineMembers.length === 1 ? 'membro online' : 'membri online'}`) : 
-                                    (onlineMembers.includes(activeRoom.data?.otherUser) ? 'online' : 'offline') }
+                                    (onlineMembers.includes(activeRoom.data?.other_user_id) ? 'online' : 'offline') }
                             </span>
                         </div>
                     </div>

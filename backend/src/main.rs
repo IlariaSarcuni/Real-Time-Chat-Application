@@ -82,9 +82,9 @@ async fn main() {
         .route("/unread-notifications", get(h_team::get_unread_notifications).route_layer(from_fn(auth_middleware)))
         .route("/mark-read/{team_id}", post(h_team::mark_as_read).route_layer(from_fn(auth_middleware)))
         // WebSocket
-        .route("/ws/team/{team_id}", get(websocket_handler).route_layer(from_fn(auth_middleware)))
-        .route("/ws/private/{chat_id}", get(websocket_handler).route_layer(from_fn(auth_middleware)))
-        
+        .route("/ws/team/{id}", get(websocket_handler).route_layer(from_fn(auth_middleware)))
+        .route("/ws/private/{id}", get(websocket_handler).route_layer(from_fn(auth_middleware)))
+
         // Layers
         .layer(AuthSessionLayer::<User, i64, SessionSqlitePool, SqlitePool>::new(Some(pool.clone())).with_config(auth_config))
         .layer(SessionLayer::new(session_store))

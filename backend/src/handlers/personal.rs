@@ -1,50 +1,9 @@
-use axum::{Extension, Json, extract::{State, Query, Path}, http::StatusCode, response::IntoResponse};
+use axum::{Extension, Json, extract::{State, Path}, response::IntoResponse};
 use serde_json::{Value, json};
-use sqlx::{sqlite,Row};
-use std::collections::{HashMap, HashSet};
-use chrono::Local;
-use colored::*;
 
 use crate::{models::*, error::AppError, state::AppState};
 
-// --- MESSAGGI ---
-/* 
-pub async fn get_list_privates(Extension(user): Extension<User>, State(state): State<AppState>)-> Result<impl IntoResponse, AppError>
-{
-    
-    let rows: Vec<Chat> =sqlx::query_as("SELECT m.id,m.id_user1,m.id_user2,m.name1,m.name2,m.message,m.data,m.ora,m.type FROM personal_message m WHERE id_user1=?1 OR id_user2=?1")
-    .bind(user.id).fetch_all(&state.pool).await?;
-
-    /* 
-    let result: Vec<(i32, i32, String, String)>= rows.into_iter().map(|row|{
-        let id_user1:i32=row.get("id_user1");
-        let id_user2:i32=row.get("id_user2");
-        let data:String=row.get("data");
-        let ora:String=row.get("ora");
-
-        (id_user1,id_user2,data,ora)
-    }).collect();
-    */
-    //println!("{:?}",result);
-    //let result=serde_json::to_string_pretty(&rows).unwrap();
-    Ok(Json(rows))
-
-}
-    */
-
-pub async fn get_chat_messages(Extension(user): Extension<User>, State(state): State<AppState>,Json(body): Json<Value>)-> Result<impl IntoResponse, AppError>
-{
-    let chat_id = body.get("chat_id").and_then(|v| v.as_i64()).unwrap_or(0);    //to chat
-
-    // INFO : name1 e name2 = from , to
-    let rows: Vec<PrivateMessage> = sqlx::query_as("SELECT id_chat,message,data,ora,name1,name2,type FROM private_messages WHERE id_chat=?1")
-    .bind(chat_id).fetch_all(&state.pool).await?;
-
-    println!("{:?}",rows);
-    Ok(Json(rows))
-
-}
-
+// --- LIST PRIVATE CHATS ---
 pub async fn get_chat_list(Extension(user): Extension<User>, State(state): State<AppState>)-> Result<impl IntoResponse, AppError>
 {
     let rows: Vec<ChatListRow> = sqlx::query_as("SELECT c.id,
@@ -65,68 +24,100 @@ pub async fn get_chat_list(Extension(user): Extension<User>, State(state): State
     Ok(Json(rows))
 }
 
+// --- NEW PRIVATE CHAT ---
 pub async fn create_chat(Extension(user): Extension<User>, State(state): State<AppState>, Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
-        //TODO: Controlla prima se è già stata creata (anche bidirezionale idutente = 2 e 1 o 1 e 2)
-        
-        
-        let user_id = body.get("user_id").and_then(|v| v.as_i64()).unwrap_or(0);    //to user
-        sqlx::query("INSERT INTO private_chats_assoc (id_user1,id_user2) VALUES(?1,?2)")
-        .bind(user.id).bind(user_id).execute(&state.pool).await?;
+    
+    // 1. Check if existed username
+    let target_username = body.get("username").and_then(|v| v.as_str()).ok_or(AppError::BadRequest("Username non trovato".into()))?;
+    // 2. If it exists, search id target user
+    let target_user: UserSql = sqlx::query_as("SELECT id, username, password FROM user WHERE username = ?1")
+        .bind(target_username).fetch_optional(&state.pool)
+        .await?.ok_or(AppError::UserNotFound)?;
+    // 3. Create chat with yourself
+    if target_user.id as i64 == user.id {
+        return Err(AppError::BadRequest("Non puoi creare una chat con te stesso".into()));
+    }
+    // 4. Verify if already exists a chat between these two users
+    let existing_chat = sqlx::query_scalar::<_, i64>(
+        "SELECT id FROM private_chat_assoc WHERE (id_user1 = ?1 AND id_user2 = ?2) OR (id_user1 = ?2 AND id_user2 = ?1)")
+        .bind(user.id)
+        .bind(target_user.id)
+        .fetch_optional(&state.pool)
+        .await?;
+    if let Some(id) = existing_chat {
+        return Ok(Json(json!({ "id": id, "message": "Chat esistente" })));
+    }
+    // 5. Create new chat
+    let result = sqlx::query("INSERT INTO private_chats_assoc (id_user1, id_user2) VALUES(?1, ?2)")
+    .bind(user.id).bind(target_user.id).execute(&state.pool).await?;
 
-         Ok(Json(json!({ "success": true, "message": "Chat creata." })))
+     Ok(Json(json!({ "id": result.last_insert_rowid(), "success": true, "message": "Chat creata." })))
 }
 
+// --- CHAT MESSAGES ---
+pub async fn get_chat_messages(Extension(user): Extension<User>, State(state): State<AppState>, Path(chat_id): Path<i64>)-> Result<impl IntoResponse, AppError>
+{
+    let is_participant = sqlx::query_scalar::<_, i64>(
+        "SELECT id FROM private_chats_assoc WHERE id = ?1 AND (id_user1 = ?2 OR id_user2 = ?2)"
+    ).bind(chat_id).bind(user.id).fetch_optional(&state.pool).await?;
+
+    if is_participant.is_none() {
+        return Err(AppError::Forbidden);
+    }
+
+    // INFO: name1 and name2 are respectively from and to
+    let rows: Vec<PrivateMessage> = sqlx::query_as("SELECT id_chat, message, data, ora, name1, name2, type FROM private_messages WHERE id_chat = ?1 ORDER BY id ASC")
+    .bind(chat_id).fetch_all(&state.pool).await?;
+
+    Ok(Json(rows))
+}
+
+// --- SEND CHAT MESSAGE ---
 pub async fn send_chat_message(Extension(user): Extension<User>, State(state): State<AppState>, Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> 
 {
-    let chat_id = body.get("chat_id").and_then(|v| v.as_i64()).unwrap_or(0);    //to user
-    let msg = body.get("message").and_then(|v| v.as_str()).unwrap_or("");
-    let from = body.get("from").and_then(|v| v.as_str()).unwrap_or("");
-    let to = body.get("to").and_then(|v| v.as_str()).unwrap_or("");
+    let chat_id = body.get("chat_id").and_then(|v| v.as_i64()).ok_or(AppError::BadRequest("ID chat mancante".into()))?;
+    let message = body.get("message").and_then(|v| v.as_str()).unwrap_or("");
 
-    if msg.trim().is_empty() { return Err(AppError::BadRequest("Messaggio non valido.".into())); }
-
-    sqlx::query("INSERT INTO private_messages (id_chat,message,data,ora,name1,name2,type) VALUES (?1,?2,CURRENT_DATE, CURRENT_TIME,?3,?4, 'chat')")
-        .bind(chat_id).bind(msg)
-        .bind(from).bind(to)
-        .execute(&state.pool).await?;
-
-    Ok(Json(json!({ "success": true, "message": "Inviato." })))
-}
-
-
-/*
-pub async fn send_message(Extension(user): Extension<User>, State(state): State<AppState>, Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
-    let user_id = body.get("user_id").and_then(|v| v.as_i64()).unwrap_or(0);    //to user
-    let msg = body.get("message").and_then(|v| v.as_str()).unwrap_or("");
-
-    if msg.trim().is_empty() { return Err(AppError::BadRequest("Messaggio non valido.".into())); }
-
-    let user1:UserSql = sqlx::query_as("SELECT id,username,password FROM user WHERE id=?1").bind(user.id).fetch_one(&state.pool).await?;
-    let user2:UserSql = sqlx::query_as("SELECT id,username,password FROM user WHERE id=?1").bind(user_id).fetch_one(&state.pool).await?;
-
-
-    sqlx::query("INSERT INTO private_messages (id_chat,id_user1,id_user2,name1,name2,message,data,ora,type) VALUES (?1,?2,?3,?4,?5, CURRENT_DATE, CURRENT_TIME, 'chat')")
-        .bind(user.id).bind(user_id)
-        .bind(user1.username).bind(user2.username)
-        .bind(msg).execute(&state.pool).await?;
-
-    let msg_payload = json!({
-        "username": user.username,
-        "to": user_id,
-        "message": msg,
-        "ora": Local::now().format("%H:%M:%S").to_string(),
-        "data": Local::now().format("%Y-%m-%d").to_string(),
-        "type": "chat"
-    });
-
-    //TODO: Da sistemare
-    /*
-    if let Some(tx) = state.chat_rooms.get(&team_id) {
-        let _ = tx.send(serde_json::to_string(&msg_payload).unwrap_or_default());
+    if message.trim().is_empty() {
+        return Err(AppError::BadRequest("Impossibile inviare un messaggio vuoto".into()));
     }
-    */
 
-    Ok(Json(json!({ "success": true, "message": "Inviato." })))
+    // Retrieve chat info (two users)
+    let chat_info: PrivateAssoc = sqlx::query_as(
+        "SELECT id, id_user1, id_user2 FROM private_chats_assoc WHERE id = ?1"
+    )
+    .bind(chat_id)
+    .fetch_one(&state.pool)
+    .await?;
+
+    let user1: UserSql = sqlx::query_as("SELECT id, username, password FROM user WHERE id = ?1").bind(chat_info.id_user1).fetch_one(&state.pool).await?;
+    let user2: UserSql = sqlx::query_as("SELECT id, username, password FROM user WHERE id = ?1").bind(chat_info.id_user2).fetch_one(&state.pool).await?;
+
+    // Insert new chat message
+    sqlx::query(
+        r#"
+        INSERT INTO private_messages (id_chat, message, data, ora, name1, name2, type) 
+        VALUES (?1, ?2, CURRENT_DATE, CURRENT_TIME, ?3, ?4, 'chat')
+        "#
+    )
+    .bind(chat_id)
+    .bind(message)
+    .bind(&user1.username)
+    .bind(&user2.username)
+    .execute(&state.pool)
+    .await?;
+
+    // Notify via WebSocket
+    let message_payload = json!({
+        "type": "chat",
+        "username": user.username,
+        "message": message,
+        "chat_id": chat_id
+    }).to_string();
+
+    if let Some(tx) = state.chat_rooms.get(&chat_id) {
+        let _ = tx.send(message_payload);
+    }
+
+    Ok(Json(json!({ "status": "success" })))
 }
-
-    */
