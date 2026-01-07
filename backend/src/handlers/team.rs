@@ -116,6 +116,13 @@ pub async fn create_team(Extension(user): Extension<User>, State(state): State<A
     let team_id = insert_res.last_insert_rowid();
     sqlx::query("INSERT INTO user_team (id_user, id_team) VALUES (?1, ?2)").bind(user.id).bind(team_id).execute(&state.pool).await?;
 
+    // Traccia il momento di ingresso per nascondere i messaggi precedenti al join
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS user_team_join (id_user INTEGER NOT NULL, id_team INTEGER NOT NULL, joined_at TEXT NOT NULL, PRIMARY KEY (id_user, id_team))"
+    ).execute(&state.pool).await?;
+    sqlx::query("INSERT OR REPLACE INTO user_team_join (id_user, id_team, joined_at) VALUES (?1, ?2, datetime('now'))")
+        .bind(user.id).bind(team_id).execute(&state.pool).await?;
+
     Ok((StatusCode::CREATED, Json(json!({ "success": true, "message": "Gruppo creato!", "team": { "id": team_id, "name": name } }))))
 }
 
@@ -140,11 +147,14 @@ pub async fn leave_team(Extension(user): Extension<User>, State(state): State<Ap
 
     //
     sqlx::query("DELETE FROM user_team WHERE id_user = ?1 AND id_team = ?2").bind(user.id).bind(team_id).execute(&mut *tx).await?;
+    sqlx::query("DELETE FROM user_team_join WHERE id_user = ?1 AND id_team = ?2").bind(user.id).bind(team_id).execute(&mut *tx).await?;
     if members_count==1
     {
         sqlx::query("DELETE FROM team WHERE id= ?1").bind(team_id).execute(&mut *tx).await?;
         //cancello i messaggi
         sqlx::query("DELETE FROM message WHERE id_team= ?1").bind(team_id).execute(&mut *tx).await?;
+        // pulizia join table
+        sqlx::query("DELETE FROM user_team_join WHERE id_team = ?1").bind(team_id).execute(&mut *tx).await?;
         
         tx.commit().await?;
         
@@ -193,13 +203,15 @@ pub async fn invite(Extension(user): Extension<User>, State(state): State<AppSta
         .bind(target_user_id).bind(team_id).fetch_one(&state.pool).await?;
     if already_in { return Err(AppError::BadRequest("Utente già nel gruppo.".into())); }
 
-    // Controllo se già invitato (se sì, ok, niente errore)
+    // Blocco inviti duplicati: se è già in attesa, restituiamo errore esplicito
     let pending: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM invite WHERE id_user = ?1 AND id_team = ?2)")
         .bind(target_user_id).bind(team_id).fetch_one(&state.pool).await?;
-    
-    if !pending {
-        sqlx::query("INSERT INTO invite (id_user, id_team) VALUES (?1, ?2)").bind(target_user_id).bind(team_id).execute(&state.pool).await?;
+
+    if pending {
+        return Err(AppError::BadRequest("Invito già inviato e in attesa di risposta.".into()));
     }
+
+    sqlx::query("INSERT INTO invite (id_user, id_team) VALUES (?1, ?2)").bind(target_user_id).bind(team_id).execute(&state.pool).await?;
 
     Ok(Json(json!({ "success": true, "message": "Invito inviato!" })))
 }
@@ -210,6 +222,14 @@ pub async fn accept(Extension(user): Extension<User>, State(state): State<AppSta
 
     let mut tx = state.pool.begin().await?;
     sqlx::query("INSERT INTO user_team (id_user, id_team) VALUES (?1, ?2)").bind(user.id).bind(team_id).execute(&mut *tx).await?;
+
+    // Registra l'istante di ingresso per tagliare i messaggi precedenti
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS user_team_join (id_user INTEGER NOT NULL, id_team INTEGER NOT NULL, joined_at TEXT NOT NULL, PRIMARY KEY (id_user, id_team))"
+    ).execute(&mut *tx).await?;
+    sqlx::query("INSERT OR REPLACE INTO user_team_join (id_user, id_team, joined_at) VALUES (?1, ?2, datetime('now'))")
+        .bind(user.id).bind(team_id).execute(&mut *tx).await?;
+
     sqlx::query("DELETE FROM invite WHERE id_user = ?1 AND id_team = ?2").bind(user.id).bind(team_id).execute(&mut *tx).await?;
     
     let system_message_db = format!("{} è entrato nel gruppo", user.username);
@@ -243,8 +263,34 @@ pub async fn get_messages(Extension(user): Extension<User>, State(state): State<
 
     if !check_membership(user.id, team_id, &state.pool).await? { return Err(AppError::Forbidden); }
 
-    let rows: Vec<MessageResponse> = sqlx::query_as(r#"SELECT u.username, m.message, m.ora, m.data, m.type FROM message m JOIN user u ON m.id_user = u.id WHERE m.id_team = ?1 ORDER BY m.data ASC, m.ora ASC"#)
-        .bind(team_id).fetch_all(&state.pool).await?;
+    // Garantisce la presenza della tabella che traccia il momento di ingresso
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS user_team_join (id_user INTEGER NOT NULL, id_team INTEGER NOT NULL, joined_at TEXT NOT NULL, PRIMARY KEY (id_user, id_team))"
+    ).execute(&state.pool).await?;
+
+    let joined_at: Option<String> = sqlx::query_scalar(
+        "SELECT joined_at FROM user_team_join WHERE id_user = ?1 AND id_team = ?2"
+    )
+    .bind(user.id)
+    .bind(team_id)
+    .fetch_optional(&state.pool)
+    .await?;
+
+    // Se manca la data di ingresso (vecchi membri), mostra tutti i messaggi
+    let cutoff = joined_at.unwrap_or_else(|| "1970-01-01 00:00:00".to_string());
+
+    let rows: Vec<MessageResponse> = sqlx::query_as(r#"
+        SELECT u.username, m.message, m.ora, m.data, m.type
+        FROM message m
+        JOIN user u ON m.id_user = u.id
+        WHERE m.id_team = ?1
+          AND datetime(m.data || ' ' || m.ora) >= datetime(?2)
+        ORDER BY m.data ASC, m.ora ASC
+    "#)
+        .bind(team_id)
+        .bind(cutoff)
+        .fetch_all(&state.pool)
+        .await?;
     Ok(Json(rows))
 }
 

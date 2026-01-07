@@ -22,7 +22,7 @@ pub async fn cpu_logger_task() {
             let usage = process.cpu_usage();
             let run_time = process.run_time(); 
             
-            let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+            let timestamp = Local::now().format("%d-%m-%Y %H:%M:%S").to_string();
             let log_entry = format!(
                 "[{}] CPU Usage: {:.2}% | Total Run Time: {}s\n",
                 timestamp, usage, run_time
