@@ -43,13 +43,18 @@ pub async fn login(
     if let Some(u) = user_sql {
         if bcrypt::verify(user.password, &u.password).unwrap_or(false) {
             auth.login_user(u.id as i64);
+            // Seed global presence
+            state.presence_map.insert(u.id as i64, std::time::Instant::now());
             return Ok(Json(json!({ "success": true, "message": "Login effettuato!" })));
         }
     }
     Err(AppError::LoginFail)
 }
 
-pub async fn log_out(auth: AuthSession<User, i64, SessionSqlitePool, SqlitePool>) -> impl IntoResponse {
+pub async fn log_out(auth: AuthSession<User, i64, SessionSqlitePool, SqlitePool>, State(state): State<AppState>) -> impl IntoResponse {
+    if let Some(user) = auth.current_user.clone() {
+        state.presence_map.remove(&user.id);
+    }
     auth.logout_user();
     Json(json!({ "success": true, "message": "Logout completato." }))
 }

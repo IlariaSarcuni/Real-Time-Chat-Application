@@ -186,6 +186,11 @@ const getChatMessages = async (chatId) => {
     return await handleResponse(response);
 };
 
+const getPrivateOnline = async (chatId) => {
+    const response = await fetch(`${SERVER_URL}/private/${chatId}/online`, { method: 'GET', credentials: 'include' });
+    return await handleResponse(response);
+}
+
 const sendPrivateMessage = async (id, msg, from, to) => {
     const response = await fetch(`${SERVER_URL}/chat/send`, {
         method: 'POST',
@@ -233,12 +238,25 @@ const declineInvite = async (teamId) => {
     return await handleResponse(response);
 };
 
+// --- PRESENCE (GLOBAL) ---
+const heartbeatPresence = async () => {
+    const response = await fetch(`${SERVER_URL}/presence/heartbeat`, { method: 'POST', credentials: 'include' });
+    return await handleResponse(response);
+};
+
+const isUserOnline = async (userId) => {
+    const response = await fetch(`${SERVER_URL}/presence/user/${userId}`, { method: 'GET', credentials: 'include' });
+    return await handleResponse(response);
+};
+
 const API = { 
     register, logIn, logOut, getUserInfo,
     getTeams, getOnlineMembers, getTeamMessages, sendTeamMessage, createTeam, renameTeam, leaveTeam,
     inviteUser, getInvites, acceptInvite, declineInvite,
     getUnreadCounts, getTeamMembers, markAsRead,
-    getChats, getChatMessages, sendPrivateMessage, createPrivateChat
+    getChats, getChatMessages, sendPrivateMessage, createPrivateChat,
+    getPrivateOnline,
+    heartbeatPresence, isUserOnline
 };
 
 export default API;

@@ -1,3 +1,4 @@
 pub mod auth;
 pub mod team;
 pub mod personal;
+pub mod presence;

@@ -92,7 +92,13 @@ function ChatPage({ user }) {
                     if (isMounted) setOnlineMembers(Array.from(new Set(usernames)));
                 } else {
                     msgs = await API.getChatMessages(activeRoom.id);
-                    if (isMounted) setOnlineMembers([]);
+                    // Global presence: check other user online by id
+                    try {
+                        const res = await API.isUserOnline(activeRoom.data?.other_user_id);
+                        if (isMounted) setOnlineMembers(res.online ? [activeRoom.data?.other_username] : []);
+                    } catch {
+                        if (isMounted) setOnlineMembers([]);
+                    }
                 }
                 if (isMounted) setMessages(Array.isArray(msgs) ? msgs : []);
             } catch (err) {
@@ -129,10 +135,16 @@ function ChatPage({ user }) {
                                 [incomingId]: (prev[incomingId] || 0) + 1
                             }));
                         }
-                    } else if (data.type === "online") {
-                        setOnlineMembers(prev => Array.from(new Set([...prev, data.username])));
-                    } else if (data.type === "offline") {
-                        setOnlineMembers(prev => prev.filter(u => u !== data.username));
+                    } else if (data.type === "online" || data.type === "offline") {
+                        // For teams, refresh from API to reflect global presence
+                        if (activeRoom.type === 'team') {
+                            API.getOnlineMembers(activeRoom.id)
+                                .then(list => {
+                                    const usernames = Array.isArray(list) ? list.map(m => m.username) : [];
+                                    setOnlineMembers(Array.from(new Set(usernames)));
+                                })
+                                .catch(() => {});
+                        }
                     } else {
                         setMessages(prev => [...prev, data]);
                     }

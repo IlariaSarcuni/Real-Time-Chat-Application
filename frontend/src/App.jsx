@@ -68,6 +68,19 @@ function App() {
     window.location.href = '/login';
   };
 
+  // Global presence heartbeat while logged in
+  useEffect(() => {
+    let timer;
+    const beat = async () => {
+      try { await API.heartbeatPresence(); } catch { /* noop */ }
+    };
+    if (loggedIn) {
+      beat();
+      timer = setInterval(beat, 30000); // every 30s
+    }
+    return () => { if (timer) clearInterval(timer); };
+  }, [loggedIn]);
+
   if (loadingInfo) {
     return <div className="p-5 text-center">Caricamento Ruggine...</div>;
   }

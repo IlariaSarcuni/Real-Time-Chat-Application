@@ -1,6 +1,6 @@
 use axum::{Extension, Json, extract::{State, Query, Path}, http::StatusCode, response::IntoResponse};
 use serde_json::{Value, json};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use chrono::Local;
 use colored::*;
 
@@ -47,40 +47,33 @@ pub async fn get_online_members(
         return (StatusCode::FORBIDDEN, "Non appartieni a questo gruppo").into_response();
     }
 
-    // 2. Retrieve id online usersfrom DashMap
-    let online_ids: HashSet<i64> = match state.online_users.get(&team_id) {
-        Some(entry) => {
-            entry.lock().await.clone()
-        },
-        None => {
-            HashSet::new()
-        }
-    };
-
-    if online_ids.is_empty() {
-        return (StatusCode::OK, Json(json!([]))).into_response();
-    }
-
-    // 3. Convert id in username
-    let placeholders: Vec<String> = (0..online_ids.len()).map(|_| "?".to_string()).collect();
-    let query_string = format!(
-        "SELECT username FROM user WHERE id IN ({})", 
-        placeholders.join(",")
-    );
-
-    let mut query = sqlx::query_as::<_, MemberResponse>(&query_string);
-    for id in online_ids.iter() {
-        query = query.bind(id);
-    }
-
-    // 4. Execute query
-    let online_members: Vec<MemberResponse> = match query.fetch_all(&state.pool).await {
-        Ok(members) => members,
+    // 2. Get all team members (id, username)
+    let members: Vec<(i64, String)> = match sqlx::query_as::<_, (i64, String)>(
+        r#"SELECT u.id, u.username FROM user_team ut JOIN user u ON ut.id_user = u.id WHERE ut.id_team = ?1"#
+    )
+    .bind(team_id)
+    .fetch_all(&state.pool)
+    .await {
+        Ok(rows) => rows,
         Err(e) => {
-            eprintln!("Errore DB nel recupero nomi utente online: {}", e);
+            eprintln!("Errore DB nel recupero membri del gruppo: {}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR, "Errore Database").into_response();
         }
     };
+
+    // 3. Filter by global presence (heartbeat)
+    use std::time::{Duration, Instant};
+    const ONLINE_THRESHOLD: Duration = Duration::from_secs(60);
+    let now = Instant::now();
+
+    let online_members: Vec<MemberResponse> = members
+        .into_iter()
+        .filter(|(id, _)| match state.presence_map.get(id) {
+            Some(ts) => now.duration_since(*ts.value()) <= ONLINE_THRESHOLD,
+            None => false,
+        })
+        .map(|(_, username)| MemberResponse { username })
+        .collect();
 
     (StatusCode::OK, Json(online_members)).into_response()
 }

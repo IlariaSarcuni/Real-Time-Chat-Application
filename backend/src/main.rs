@@ -22,7 +22,7 @@ use colored::*;
 use crate::{
     state::AppState,
     models::User,
-    handlers::{auth as h_auth, team as h_team,personal as h_personal},
+    handlers::{auth as h_auth, team as h_team,personal as h_personal, presence as h_presence},
     ws::websocket_handler
 };
 
@@ -63,6 +63,7 @@ async fn main() {
         .route("/list/private", get(h_personal::get_chat_list).route_layer(from_fn(auth_middleware)))
         .route("/chat/messages/{chat_id}", get(h_personal::get_chat_messages).route_layer(from_fn(auth_middleware)))
         .route("/chat/send", post(h_personal::send_chat_message).route_layer(from_fn(auth_middleware)))
+        .route("/private/{chat_id}/online", get(h_personal::get_private_online).route_layer(from_fn(auth_middleware)))
 
         // Team Routes
         .route("/list/teams", get(h_team::get_teams).route_layer(from_fn(auth_middleware)))
@@ -81,6 +82,9 @@ async fn main() {
         // Notifications
         .route("/unread-notifications", get(h_team::get_unread_notifications).route_layer(from_fn(auth_middleware)))
         .route("/mark-read/{team_id}", post(h_team::mark_as_read).route_layer(from_fn(auth_middleware)))
+        // Presence (global)
+        .route("/presence/heartbeat", post(h_presence::heartbeat).route_layer(from_fn(auth_middleware)))
+        .route("/presence/user/{id}", get(h_presence::is_online).route_layer(from_fn(auth_middleware)))
         // WebSocket
         .route("/ws/team/{id}", get(websocket_handler).route_layer(from_fn(auth_middleware)))
         .route("/ws/private/{id}", get(websocket_handler).route_layer(from_fn(auth_middleware)))

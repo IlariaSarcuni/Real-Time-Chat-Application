@@ -52,7 +52,7 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
                             <span className="rounded-circle me-1" style={{ width: '8px', height: '8px', backgroundColor: onlineMembers.length > 0 ? '#28a745' : '#6c757d' }}></span>
                             <span className={onlineMembers.length > 0 ? "text-success" : "text-muted"}>
                                 {isTeam ? (`${onlineMembers.length} ${onlineMembers.length === 1 ? 'membro online' : 'membri online'}`) : 
-                                    (onlineMembers.includes(activeRoom.data?.other_user_id) ? 'online' : 'offline') }
+                                    (onlineMembers.includes(activeRoom.data?.other_username) ? 'online' : 'offline') }
                             </span>
                         </div>
                     </div>
@@ -112,7 +112,7 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
                                     <div className="d-flex justify-content-center my-1">
                                         <span className={`small text-center px-2 py-1 rounded ${theme === 'dark' ? 'text-white opacity-75' : 'text-muted'}`} 
                                             style={{ backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }}>
-                                            **{msg.message}**
+                                            {msg.message}
                                         </span>
                                     </div>
                                 </div>

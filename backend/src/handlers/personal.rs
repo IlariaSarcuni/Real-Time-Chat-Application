@@ -1,5 +1,6 @@
 use axum::{Extension, Json, extract::{State, Path}, response::IntoResponse};
 use serde_json::{Value, json};
+use std::collections::HashSet;
 
 use crate::{models::*, error::AppError, state::AppState};
 
@@ -132,4 +133,44 @@ pub async fn send_chat_message(Extension(user): Extension<User>, State(state): S
     }
 
     Ok(Json(json!({ "status": "success" })))
+}
+
+// --- PRIVATE ONLINE MEMBERS ---
+pub async fn get_private_online(
+    Extension(user): Extension<User>,
+    State(state): State<AppState>,
+    Path(chat_id): Path<i64>
+) -> Result<impl IntoResponse, AppError> {
+    // 1. Check participant
+    let is_participant = sqlx::query_scalar::<_, i64>(
+        "SELECT id FROM private_chats_assoc WHERE id = ?1 AND (id_user1 = ?2 OR id_user2 = ?2)"
+    )
+    .bind(chat_id)
+    .bind(user.id)
+    .fetch_optional(&state.pool)
+    .await?;
+
+    if is_participant.is_none() { return Err(AppError::Forbidden); }
+
+    // 2. Retrieve online user ids from shared map
+    let online_ids: HashSet<i64> = match state.online_users.get(&chat_id) {
+        Some(mutex_set) => {
+            let set = mutex_set.lock().await;
+            set.clone()
+        }
+        None => HashSet::new(),
+    };
+
+    if online_ids.is_empty() {
+        return Ok(Json(Vec::<crate::models::MemberResponse>::new()));
+    }
+
+    // 3. Build query to fetch usernames
+    let placeholders: Vec<String> = (0..online_ids.len()).map(|_| "?".to_string()).collect();
+    let sql = format!("SELECT username FROM user WHERE id IN ({})", placeholders.join(","));
+    let mut query = sqlx::query_as::<_, crate::models::MemberResponse>(&sql);
+    for id in online_ids.iter() { query = query.bind(id); }
+
+    let online_members: Vec<crate::models::MemberResponse> = query.fetch_all(&state.pool).await?;
+    Ok(Json(online_members))
 }
