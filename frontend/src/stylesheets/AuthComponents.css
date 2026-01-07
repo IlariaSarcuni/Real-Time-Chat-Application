@@ -100,6 +100,50 @@ div.line-separator::after {
     border-color: #B7410E;
 }
 
+/* *** Password toggle *** */
+.password-input-wrapper {
+    position: relative;
+}
+
+.password-input-wrapper .form-control {
+    padding-right: 45px;
+}
+
+/* Nasconde l'icona nativa del browser per mostrare/nascondere la password */
+.password-input-wrapper .form-control::-ms-reveal,
+.password-input-wrapper .form-control::-ms-clear {
+    display: none;
+}
+
+.password-input-wrapper .form-control::-webkit-credentials-auto-fill-button,
+.password-input-wrapper .form-control::-webkit-textfield-decoration-container {
+    display: none !important;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6C757D;
+    transition: color 0.2s;
+}
+
+.password-toggle-btn:hover {
+    color: #B7410E;
+}
+
+.password-toggle-btn:focus {
+    outline: none;
+}
+
 /* *** Light Mode (only) *** */
 .light .mandatory  {
     color: #ff0000;
@@ -147,4 +191,12 @@ div.line-separator::after {
 .dark .form-control::placeholder {
     color: #999999 !important; /* Grigio medio chiaro, ben visibile sul background scuro */
     opacity: 1; /* Assicurati che non venga applicata una trasparenza */
+}
+
+.dark .password-toggle-btn {
+    color: #999999;
+}
+
+.dark .password-toggle-btn:hover {
+    color: #D64F10;
 }
