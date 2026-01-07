@@ -83,7 +83,9 @@ pub async fn get_unread_notifications(Extension(user): Extension<User>, State(st
         SELECT ut.id_team, COUNT(m.id_message) as notification
         FROM user_team ut
         JOIN message m ON m.id_team = ut.id_team
-        WHERE ut.id_user = ?1 AND (
+        WHERE ut.id_user = ?1 
+        AND m.id_user != ?1
+        AND (
             m.data > ut.last_data 
             OR (m.data = ut.last_data AND m.ora > ut.last_ora)
         )

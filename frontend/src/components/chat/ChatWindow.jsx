@@ -110,8 +110,8 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
                                 <div key={idx} className="d-flex flex-column">
                                     {dateSeparator}
                                     <div className="d-flex justify-content-center my-1">
-                                        <span className={`small text-center px-2 py-1 rounded ${theme === 'dark' ? 'text-white opacity-75' : 'text-muted'}`} 
-                                            style={{ backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }}>
+                                        <span className={`small text-center px-2 py-1 rounded ${theme === 'dark' ? 'text-white' : 'text-muted'}`} 
+                                            style={{ backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)' }}>
                                             {msg.message}
                                         </span>
                                     </div>

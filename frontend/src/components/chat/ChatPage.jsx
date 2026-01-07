@@ -126,14 +126,24 @@ function ChatPage({ user }) {
                     const incomingId = data.chat_id || data.team_id;
 
                     if (data.type === "chat") {
-                        if (incomingId === activeRoom.id) {
-                            setMessages(prev => [...prev, data]);
-                        } else if (data.username !== user.username) {
-                            // Incrementa notifiche solo se il messaggio non è dell'utente corrente
-                            setNotifications(prev => ({
-                                ...prev,
-                                [incomingId]: (prev[incomingId] || 0) + 1
-                            }));
+                        // Solo messaggi da altri utenti
+                        if (data.username === user.username) {
+                            // Se è un messaggio dell'utente stesso nella stanza attiva, aggiungilo
+                            if (incomingId === activeRoom.id) {
+                                setMessages(prev => [...prev, data]);
+                            }
+                            // Non fare nulla per messaggi propri in altre stanze
+                        } else {
+                            // Messaggi di altri utenti
+                            if (incomingId === activeRoom.id) {
+                                setMessages(prev => [...prev, data]);
+                            } else {
+                                // Incrementa notifiche per messaggi in altre stanze
+                                setNotifications(prev => ({
+                                    ...prev,
+                                    [incomingId]: (prev[incomingId] || 0) + 1
+                                }));
+                            }
                         }
                     } else if (data.type === "online" || data.type === "offline") {
                         // For teams, refresh from API to reflect global presence
@@ -310,7 +320,7 @@ function ChatPage({ user }) {
                         </div>
                         <ListGroup variant="flush">
                             {teams.map(team => (
-                                <ListGroup.Item key={team.id} action active={activeRoom.id === team.id} onClick={() => handleSelectActiveRoom('team', team)} className="border-0 rounded-3 mb-1">
+                                <ListGroup.Item key={team.id} action active={activeRoom.id === team.id} onClick={() => handleSelectActiveRoom('team', team)} className="border-0 rounded-3 mb-1 d-flex align-items-center">
                                     <span className="text-truncate small"><i className="bi bi-hash me-1"></i> {team.name}</span>
                                     {notifications[team.id] > 0 && <Badge bg="danger" pill className="ms-auto">{notifications[team.id]}</Badge>}
                                 </ListGroup.Item>
@@ -323,7 +333,7 @@ function ChatPage({ user }) {
                         </div>
                         <ListGroup variant="flush">
                             {chats.map(chat => (
-                                <ListGroup.Item key={chat.id} action active={activeRoom.id === chat.id} onClick={() => handleSelectActiveRoom('private', chat)} className="border-0 rounded-3">
+                                <ListGroup.Item key={chat.id} action active={activeRoom.id === chat.id} onClick={() => handleSelectActiveRoom('private', chat)} className="border-0 rounded-3 mb-1 d-flex align-items-center">
                                     <span className="text-truncate small"><i className="bi bi-person me-1"></i> {chat.other_username}</span>
                                     {notifications[chat.id] > 0 && <Badge bg="danger" pill className="ms-auto">{notifications[chat.id]}</Badge>}
                                 </ListGroup.Item>
