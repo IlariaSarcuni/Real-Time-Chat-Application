@@ -60,7 +60,7 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
                 {/* 2. Team buttons */}
                 {isTeam && (
                     <div className="ms-auto d-flex gap-2">
-                        {/* 2.1 Show Members (more frequent action separately) */}
+                        {/* 2.1 Show Members */}
                         <Button variant="light" onClick={onShowMembers} title="Vedi Membri" style={{ width: '45px', height: '45px' }}
                             className={`p-1 group-actions-header d-flex align-items-center justify-content-center ${theme === 'dark' ? 'text-light' : 'text-muted'} rounded`}>
                             <i className="bi bi-people-fill"></i>
@@ -96,7 +96,7 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
                 <div className="position-absolute top-0 start-0 w-100 h-100 p-4" style={{ overflowY: 'auto', zIndex: 1 }}>
                     {messages.map((msg, idx) => {
                         const prevMsg = messages[idx-1];
-                        const isSystemMessage = msg.type === "system";  // someone joins or leaves team
+                        const isSystemMessage = msg.type === "system";
                         const showDate = (!prevMsg || msg.data !== prevMsg.data)
 
                         const dateSeparator = showDate ? (
@@ -106,21 +106,19 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
                         ) : null;
 
                         if (isSystemMessage) { 
-                            // skip following bubbles logic
                             return (
                                 <div key={idx} className="d-flex flex-column">
-                                    {dateSeparator} {/* Usa il separatore unificato */}
+                                    {dateSeparator}
                                     <div className="d-flex justify-content-center my-1">
                                         <span className={`small text-center px-2 py-1 rounded ${theme === 'dark' ? 'text-white opacity-75' : 'text-muted'}`} 
                                             style={{ backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }}>
-                                                **{msg.message}**
+                                            **{msg.message}**
                                         </span>
                                     </div>
                                 </div>
                             );
                         }
 
-                        // Check if the message is mine or of other users
                         const senderName = msg.username || msg.name1;
                         const isMine = user && senderName === user.username;
                         const userColor = getColorFromUsername(msg.username, theme);
@@ -132,7 +130,14 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
                                 <div className={`mb-2 d-flex flex-column ${isMine ? 'align-items-end' : 'align-items-start'}`}>
                                     <div className={`p-2 px-3 rounded-3 shadow-sm border ${bubbleClass}`}
                                         style={{ maxWidth: '75%', minWidth: '120px', position: 'relative', border: theme === 'dark' ? '1px solid #444' : '' }}>
-                                        {!isMine && <div className="fw-bold small mb-1" style={{ color: userColor }}>~ {senderName}</div>}
+                                        
+                                        {/* MODIFICA QUI: Mostra il nome solo se è un gruppo (isTeam) e non è il mio messaggio */}
+                                        {isTeam && !isMine && (
+                                            <div className="fw-bold small mb-1" style={{ color: userColor }}>
+                                                ~ {senderName}
+                                            </div>
+                                        )}
+
                                         <div style={{ paddingRight: '45px', wordWrap: 'break-word' }}>{msg.message}</div>
                                         <div className={`small position-absolute bottom-0 end-0 pe-2 pb-1 ${isMine || theme === 'dark' ? 'text-light opacity-75' : 'text-muted'}`} style={{ fontSize: '0.65rem' }}>
                                             {msg.ora?.substring(0, 5)}
@@ -148,23 +153,19 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
 
             {/* INPUT */}
             <div className={`p-3 border-top ${theme === 'dark' ? 'bg-dark border-secondary' : 'bg-light'}`}>
-                {/* 1. Emoji selector */}
                 {showEmojiPicker && (
                     <div style={{ position: "absolute", bottom: "100px", right: "15px", zIndex: 1000}}>
                         <Picker onEmojiClick={onEmojiClick} theme={theme}/>
                     </div>
                 )}
-                {/* 2. Chat message */}
                 <Form onSubmit={onSend}>
                     <Row className="g-2">
-                        {/* 2.1 Emoji button */}
                         <Col xs="auto" className="position-relative">
                             <Button variant="light" className={`rounded-circle p-2 px-3 group-actions-header ${theme === 'dark' ? 'text-light' : 'text-muted'}`}
                                 onClick={() => setShowEmojiPicker(prev => !prev)} title="Seleziona emoji">
                                     <i className='bi bi-emoji-smile'></i>
                             </Button>
                         </Col>
-                        {/* 2.2 Input field */}
                         <Col>
                             <Form.Control type="text" placeholder="Scrivi..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
                                 className="rounded-pill py-2 px-3"
