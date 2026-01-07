@@ -9,6 +9,13 @@ pub struct Team {
     pub name: String,
 }
 
+#[derive(Serialize, FromRow)]
+pub struct InviteWithSender {
+    pub id: i64,
+    pub name: String,
+    pub invited_by: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ChatListRow {
     pub id: i64,

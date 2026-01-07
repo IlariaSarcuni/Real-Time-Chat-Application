@@ -20,8 +20,14 @@ pub async fn get_teams(Extension(user): Extension<User>, State(state): State<App
     Ok(Json(rows))
 }
 
-pub async fn get_list_invites(Extension(user): Extension<User>, State(state): State<AppState>) -> Result<Json<Vec<Team>>, AppError> {
-    let rows = sqlx::query_as(r#"SELECT t.id, t.name FROM team t INNER JOIN invite i ON i.id_team = t.id WHERE i.id_user = ?1"#)
+pub async fn get_list_invites(Extension(user): Extension<User>, State(state): State<AppState>) -> Result<Json<Vec<InviteWithSender>>, AppError> {
+    let rows = sqlx::query_as(r#"
+        SELECT t.id, t.name, COALESCE(u.username, 'Unknown') as invited_by
+        FROM invite i
+        JOIN team t ON i.id_team = t.id
+        LEFT JOIN user u ON u.id = i.id_invited_by
+        WHERE i.id_user = ?1
+    "#)
         .bind(user.id).fetch_all(&state.pool).await?;
     Ok(Json(rows))
 }
@@ -85,6 +91,7 @@ pub async fn get_unread_notifications(Extension(user): Extension<User>, State(st
         JOIN message m ON m.id_team = ut.id_team
         WHERE ut.id_user = ?1 
         AND m.id_user != ?1
+        AND m.type = 'chat'
         AND (
             m.data > ut.last_data 
             OR (m.data = ut.last_data AND m.ora > ut.last_ora)
@@ -211,7 +218,12 @@ pub async fn invite(Extension(user): Extension<User>, State(state): State<AppSta
         return Err(AppError::BadRequest("Invito già inviato e in attesa di risposta.".into()));
     }
 
-    sqlx::query("INSERT INTO invite (id_user, id_team) VALUES (?1, ?2)").bind(target_user_id).bind(team_id).execute(&state.pool).await?;
+    sqlx::query("INSERT INTO invite (id_user, id_team, id_invited_by) VALUES (?1, ?2, ?3)")
+        .bind(target_user_id)
+        .bind(team_id)
+        .bind(user.id)
+        .execute(&state.pool)
+        .await?;
 
     Ok(Json(json!({ "success": true, "message": "Invito inviato!" })))
 }

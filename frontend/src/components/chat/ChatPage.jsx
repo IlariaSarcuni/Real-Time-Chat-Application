@@ -262,7 +262,20 @@ function ChatPage({ user }) {
             alert("Invito inviato");
         } catch (err) {
             alert(err.message);
+            setShowInviteModal(false);
+            setInviteUsername("");
         }
+    };
+
+    // Azione centralizzata per aprire il modal invito resettando l'input
+    const handleOpenInvite = () => {
+        setInviteUsername("");
+        setShowInviteModal(true);
+    };
+
+    const handleCloseInvite = () => {
+        setShowInviteModal(false);
+        setInviteUsername("");
     };
 
     const handleShowMembers = async () => {
@@ -290,7 +303,15 @@ function ChatPage({ user }) {
         }
     };
 
-    const handleAccept = (id) => API.acceptInvite(id).then(refreshAllData).catch(e => console.error(e));
+    const handleAccept = (id) => {
+        API.acceptInvite(id)
+            .then(async () => {
+                await refreshAllData();
+                setNotifications(prev => ({ ...prev, [id]: 0 })); // Pulisci notifiche dopo refresh
+                await API.markAsRead(id).catch(err => console.error("Errore markAsRead:", err)); // Marca come letto nel backend
+            })
+            .catch(e => console.error(e));
+    };
     const handleDecline = (id) => { if (window.confirm("Rifiutare l'invito?")) API.declineInvite(id).then(refreshAllData); };
     const handleLeave = () => { if (window.confirm("Abbandonare il gruppo?")) API.leaveTeam(activeRoom.id).then(() => { setActiveRoom({ type: null, id: null, data: null }); setMessages([]); refreshAllData(); }); };
 
@@ -307,10 +328,11 @@ function ChatPage({ user }) {
                             <ListGroup variant="flush" className="mt-2 gap-2">
                                 {invites.map(inv => (
                                     <ListGroup.Item key={inv.id} className={`d-flex flex-column rounded border shadow-sm p-2 ${theme === 'dark' ? 'bg-dark text-white' : ''}`}>
+                                        <small className={`mb-2 ${theme === 'dark' ? 'text-light' : 'text-muted'}`}>{inv.invited_by} ti ha invitato al gruppo:</small>
                                         <div className="fw-bold mb-2 text-truncate w-100">{inv.name}</div>
                                         <ButtonGroup size="sm">
-                                            <Button variant="outline-success" onClick={() => handleAccept(inv.id)}><i className="bi bi-check-lg"></i></Button>
-                                            <Button variant="outline-danger" onClick={() => handleDecline(inv.id)}><i className="bi bi-x-lg"></i></Button>
+                                            <Button variant="outline-success" onClick={() => handleAccept(inv.id)}>Accetta</Button>
+                                            <Button variant="outline-danger" onClick={() => handleDecline(inv.id)}>Rifiuta</Button>
                                         </ButtonGroup>
                                     </ListGroup.Item>
                                 ))}
@@ -355,7 +377,7 @@ function ChatPage({ user }) {
                         newMessage={newMessage} setNewMessage={setNewMessage}
                         onlineMembers={onlineMembers} onSend={handleSendMessage}
                         onLeave={handleLeave} onShowMembers={handleShowMembers}
-                        onShowInvite={() => setShowInviteModal(true)}
+                        onShowInvite={handleOpenInvite}
                         onShowRename={() => { setRenameValue(activeRoom.data.name); setShowRenameModal(true); }}
                     />
                 ) : (
@@ -370,7 +392,7 @@ function ChatPage({ user }) {
             {/* MODALS */}
             <CreateChatModal show={showCreatePrivateModal} onHide={() => setShowCreatePrivateModal(false)} value={newChatName} onChange={setNewChatName} onSubmit={handleCreatePrivate} />
             <CreateTeamModal show={showCreateModal} onHide={() => setShowCreateModal(false)} value={newTeamName} onChange={setNewTeamName} onSubmit={handleCreateTeam} />
-            <InviteModal show={showInviteModal} onHide={() => setShowInviteModal(false)} value={inviteUsername} onChange={setInviteUsername} onSubmit={handleInvite} />
+            <InviteModal show={showInviteModal} onHide={handleCloseInvite} value={inviteUsername} onChange={setInviteUsername} onSubmit={handleInvite} />
             <MembersModal show={showMembersModal} onHide={() => setShowMembersModal(false)} members={members} onlineMembers={onlineMembers} user={user} />
             <RenameModal show={showRenameModal} onHide={() => setShowRenameModal(false)} value={renameValue} onChange={setRenameValue} onSubmit={handleRename} />
         </Container>
