@@ -64,6 +64,9 @@ async fn main() {
         .route("/chat/messages/{chat_id}", get(h_personal::get_chat_messages).route_layer(from_fn(auth_middleware)))
         .route("/chat/send", post(h_personal::send_chat_message).route_layer(from_fn(auth_middleware)))
         .route("/private/{chat_id}/online", get(h_personal::get_private_online).route_layer(from_fn(auth_middleware)))
+        // Private Chat Notifications
+        .route("/private-unread-notifications", get(h_personal::get_unread_notifications).route_layer(from_fn(auth_middleware)))
+        .route("/mark-read-private/{chat_id}", post(h_personal::mark_as_read).route_layer(from_fn(auth_middleware)))
 
         // Team Routes
         .route("/list/teams", get(h_team::get_teams).route_layer(from_fn(auth_middleware)))

@@ -44,21 +44,25 @@ function ChatPage({ user }) {
         if (!user) return { teams: [], chats: [], invites: [] };
 
         try {
-            const [ts, c, inv, unread] = await Promise.all([
+            const [ts, c, inv, unreadTeams, unreadChats] = await Promise.all([
                 API.getTeams(),
                 API.getChats(),
                 API.getInvites(),
-                API.getUnreadCounts()
+                API.getUnreadCounts(),
+                API.getPrivateUnreadCounts()
             ]);
 
             const teamsData = Array.isArray(ts) ? ts : [];
             const chatsData = Array.isArray(c) ? c : [];
             const invitesData = Array.isArray(inv) ? inv : [];
+            
+            // Combina le notifiche di team e chat private
+            const allNotifications = { ...(unreadTeams || {}), ...(unreadChats || {}) };
 
             setTeams(teamsData);
             setChats(chatsData);
             setInvites(invitesData);
-            setNotifications(unread || {});
+            setNotifications(allNotifications);
 
             return { teams: teamsData, chats: chatsData, invites: invitesData };
         } catch (e) {
@@ -138,11 +142,8 @@ function ChatPage({ user }) {
                             if (incomingId === activeRoom.id) {
                                 setMessages(prev => [...prev, data]);
                             } else {
-                                // Incrementa notifiche per messaggi in altre stanze
-                                setNotifications(prev => ({
-                                    ...prev,
-                                    [incomingId]: (prev[incomingId] || 0) + 1
-                                }));
+                                // Le notifiche vengono gestite dal backend tramite API polling
+                                // Non incrementiamo più manualmente qui
                             }
                         }
                     } else if (data.type === "online" || data.type === "offline") {
@@ -245,7 +246,11 @@ function ChatPage({ user }) {
 
         if (notifications[roomData.id] > 0) {
             setNotifications(prev => ({ ...prev, [roomData.id]: 0 }));
-            await API.markAsRead(roomData.id).catch(err => console.error("Errore markAsRead:", err));
+            if (type === 'team') {
+                await API.markAsRead(roomData.id).catch(err => console.error("Errore markAsRead:", err));
+            } else {
+                await API.markPrivateAsRead(roomData.id).catch(err => console.error("Errore markAsRead:", err));
+            }
         }
     }, [notifications]);
 

@@ -191,6 +191,24 @@ const getPrivateOnline = async (chatId) => {
     return await handleResponse(response);
 }
 
+const getPrivateUnreadCounts = async () => {
+    const response = await fetch(`${SERVER_URL}/private-unread-notifications`, { 
+        method: 'GET', 
+        credentials: 'include' 
+    });
+    if (response.ok) return await response.json();
+    return {};
+};
+
+const markPrivateAsRead = async (chatId) => {
+    const response = await fetch(`${SERVER_URL}/mark-read-private/${chatId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+    });
+    return await handleResponse(response);
+};
+
 const sendPrivateMessage = async (id, msg, from, to) => {
     const response = await fetch(`${SERVER_URL}/chat/send`, {
         method: 'POST',
@@ -254,7 +272,7 @@ const API = {
     getTeams, getOnlineMembers, getTeamMessages, sendTeamMessage, createTeam, renameTeam, leaveTeam,
     inviteUser, getInvites, acceptInvite, declineInvite,
     getUnreadCounts, getTeamMembers, markAsRead,
-    getChats, getChatMessages, sendPrivateMessage, createPrivateChat,
+    getChats, getChatMessages, sendPrivateMessage, createPrivateChat, getPrivateUnreadCounts, markPrivateAsRead,
     getPrivateOnline,
     heartbeatPresence, isUserOnline
 };

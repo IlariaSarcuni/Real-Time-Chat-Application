@@ -1,6 +1,6 @@
 use axum::{Extension, Json, extract::{State, Path}, response::IntoResponse};
 use serde_json::{Value, json};
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 use crate::{models::*, error::AppError, state::AppState};
 
@@ -173,4 +173,71 @@ pub async fn get_private_online(
 
     let online_members: Vec<crate::models::MemberResponse> = query.fetch_all(&state.pool).await?;
     Ok(Json(online_members))
+}
+
+// --- GET UNREAD NOTIFICATIONS FOR PRIVATE CHATS ---
+pub async fn get_unread_notifications(Extension(user): Extension<User>, State(state): State<AppState>) -> Result<Json<HashMap<i64, i64>>, AppError> {
+    // Recupera tutte le chat private dell'utente e conta i messaggi non letti
+    let rows: Vec<(i64, i64)> = sqlx::query_as(
+        r#"
+        SELECT pca.id, COUNT(pm.id_chat) as notification
+        FROM private_chats_assoc pca
+        JOIN private_messages pm ON pm.id_chat = pca.id
+        WHERE (pca.id_user1 = ?1 OR pca.id_user2 = ?1)
+        AND pm.name1 != ?2
+        AND (
+            CASE 
+                WHEN pca.id_user1 = ?1 THEN (
+                    pm.data > COALESCE(pca.last_data_user1, '') 
+                    OR (pm.data = COALESCE(pca.last_data_user1, '') AND pm.ora > COALESCE(pca.last_ora_user1, ''))
+                )
+                ELSE (
+                    pm.data > COALESCE(pca.last_data_user2, '') 
+                    OR (pm.data = COALESCE(pca.last_data_user2, '') AND pm.ora > COALESCE(pca.last_ora_user2, ''))
+                )
+            END
+        )
+        GROUP BY pca.id
+        "#
+    )
+    .bind(user.id)
+    .bind(&user.username)
+    .fetch_all(&state.pool)
+    .await?;
+
+    let mut counts = HashMap::new();
+    for (chat_id, count) in rows {
+        counts.insert(chat_id, count);
+    }
+    Ok(Json(counts))
+}
+
+// --- MARK PRIVATE CHAT AS READ ---
+pub async fn mark_as_read(Extension(user): Extension<User>, State(state): State<AppState>, Path(chat_id): Path<i64>) -> Result<impl IntoResponse, AppError> {
+    // Verificare che l'utente sia partecipante della chat
+    let chat_info: (i64, i64) = sqlx::query_as(
+        "SELECT id_user1, id_user2 FROM private_chats_assoc WHERE id = ?1 AND (id_user1 = ?2 OR id_user2 = ?2)"
+    )
+    .bind(chat_id)
+    .bind(user.id)
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or(AppError::Forbidden)?;
+
+    // Aggiornare le colonne giuste a seconda di quale utente è
+    if chat_info.0 == user.id {
+        // Utente 1
+        sqlx::query("UPDATE private_chats_assoc SET last_data_user1 = CURRENT_DATE, last_ora_user1 = CURRENT_TIME WHERE id = ?1")
+            .bind(chat_id)
+            .execute(&state.pool)
+            .await?;
+    } else {
+        // Utente 2
+        sqlx::query("UPDATE private_chats_assoc SET last_data_user2 = CURRENT_DATE, last_ora_user2 = CURRENT_TIME WHERE id = ?1")
+            .bind(chat_id)
+            .execute(&state.pool)
+            .await?;
+    }
+
+    Ok(Json(json!({ "success": true })))
 }
