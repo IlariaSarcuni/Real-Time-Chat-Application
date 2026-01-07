@@ -6,7 +6,7 @@ import "../../stylesheets/ChatPage.css";
 import Picker from "emoji-picker-react";
 import ThemeContext from '../../contexts/ThemeContext';
 
-function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMessage, setNewMessage, onlineMembers, 
+function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMessage, setNewMessage, onlineMembers, 
     onSend, onLeave, onShowMembers, onShowInvite, onShowRename }) 
     {
     const theme = useContext(ThemeContext);
@@ -18,6 +18,11 @@ function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMes
         setShowEmojiPicker(false);  // close picker after selection
     }
 
+    const isTeam = activeRoom.type === 'team';
+    const displayName = isTeam 
+        ? (activeRoom.data?.name || "Gruppo")
+        : (activeRoom.data?.other_username || `Utente ${activeRoom.id}`);
+
     // Auto-scroll
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -26,17 +31,6 @@ function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMes
     // Stili
     const chatBg = theme === 'dark' ? '#212529' : '#e5ddd5';
     const headerClass = theme === 'dark' ? 'bg-dark border-secondary text-white' : 'bg-white text-dark';
-
-    // If no team selected
-    if (!currentTeam) {
-        return (
-            <Col md={9} lg={10} className="d-flex flex-column p-0 h-100 align-items-center justify-content-center" 
-                 style={{ backgroundColor: chatBg, color: theme === 'dark' ? '#f8f9fa' : '#6c757d' }}>
-                <div className="display-1 opacity-25 mb-3">🦀</div>
-                <h4>Benvenuto su Ruggine Chat</h4>
-            </Col>
-        );
-    }
 
     return (
         <Col md={9} lg={10} className="d-flex flex-column p-0 h-100 position-relative" style={{ backgroundColor: chatBg }}>
@@ -48,47 +42,50 @@ function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMes
                 <div className="d-flex align-items-center me-auto">
                     {/* 1.1 Icon */}
                     <div className="text-white rounded-circle d-flex justify-content-center align-items-center me-3"
-                        style={{ width: '40px', height: '40px', backgroundColor: getColorFromUsername(currentTeam.name, theme) }}>
-                        <i className="bi bi-people-fill fs-5"></i>
+                        style={{ width: '40px', height: '40px', backgroundColor: getColorFromUsername(displayName, theme) }}>
+                        {displayName.charAt(0).toUpperCase()}
                     </div>
                     {/* 1.2 Members online */}
                     <div className="d-flex flex-column">
-                        <div className="fw-bold">{currentTeam.name}</div>
+                        <div className="fw-bold">{displayName}</div>
                         <div className="d-flex align-items-center" style={{ fontSize: '0.8rem', color: '#6c757d' }}>
                             <span className="rounded-circle me-1" style={{ width: '8px', height: '8px', backgroundColor: onlineMembers.length > 0 ? '#28a745' : '#6c757d' }}></span>
                             <span className={onlineMembers.length > 0 ? "text-success" : "text-muted"}>
-                                {onlineMembers.length} {onlineMembers.length === 1 ? 'membro online' : 'membri online'}
+                                {isTeam ? (`${onlineMembers.length} ${onlineMembers.length === 1 ? 'membro online' : 'membri online'}`) : 
+                                    (onlineMembers.includes(activeRoom.data?.other_user_id) ? 'online' : 'offline') }
                             </span>
                         </div>
                     </div>
                 </div>
-                {/* 2. Group buttons */}
-                <div className="ms-auto d-flex gap-2">
-                    {/* 2.1 Show Members (more frequent action separately) */}
-                    <Button variant="light" onClick={onShowMembers} title="Vedi Membri" style={{ width: '45px', height: '45px' }}
-                        className={`p-1 group-actions-header d-flex align-items-center justify-content-center ${theme === 'dark' ? 'text-light' : 'text-muted'} rounded`}>
-                        <i className="bi bi-people-fill"></i>
-                    </Button>
-                    {/* 2.2 Invite, Rename and Leave */}
-                    <Dropdown align="end">
-                        <Dropdown.Toggle variant="light" id="group-actions-dropdown" style={{ width: '45px', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        className={`p-1 group-actions-header ${theme === 'dark' ? 'text-light' : 'text-muted'} rounded`}>
-                            <i className="bi bi-three-dots-vertical fs-6"></i>
-                        </Dropdown.Toggle>
-                        <Dropdown.Menu variant={theme}>
-                            <Dropdown.Item onClick={onShowInvite}>
-                                <i className="bi bi-person-plus-fill me-2"></i> Invita Utente
-                            </Dropdown.Item>
-                            <Dropdown.Item onClick={onShowRename}>
-                                <i className="bi bi-pencil-square me-2"></i> Rinomina Gruppo
-                            </Dropdown.Item>
-                            <Dropdown.Divider />
-                            <Dropdown.Item onClick={onLeave} className="text-danger">
-                                <i className="bi bi-box-arrow-right me-2"></i> Abbandona Gruppo
-                            </Dropdown.Item>
-                        </Dropdown.Menu>
-                    </Dropdown>
-                </div>    
+                {/* 2. Team buttons */}
+                {isTeam && (
+                    <div className="ms-auto d-flex gap-2">
+                        {/* 2.1 Show Members (more frequent action separately) */}
+                        <Button variant="light" onClick={onShowMembers} title="Vedi Membri" style={{ width: '45px', height: '45px' }}
+                            className={`p-1 group-actions-header d-flex align-items-center justify-content-center ${theme === 'dark' ? 'text-light' : 'text-muted'} rounded`}>
+                            <i className="bi bi-people-fill"></i>
+                        </Button>
+                        {/* 2.2 Invite, Rename and Leave */}
+                        <Dropdown align="end">
+                            <Dropdown.Toggle variant="light" id="group-actions-dropdown" style={{ width: '45px', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            className={`p-1 group-actions-header ${theme === 'dark' ? 'text-light' : 'text-muted'} rounded`}>
+                                <i className="bi bi-three-dots-vertical fs-6"></i>
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu variant={theme}>
+                                <Dropdown.Item onClick={onShowInvite}>
+                                    <i className="bi bi-person-plus-fill me-2"></i> Invita Utente
+                                </Dropdown.Item>
+                                <Dropdown.Item onClick={onShowRename}>
+                                    <i className="bi bi-pencil-square me-2"></i> Rinomina Gruppo
+                                </Dropdown.Item>
+                                <Dropdown.Divider />
+                                <Dropdown.Item onClick={onLeave} className="text-danger">
+                                    <i className="bi bi-box-arrow-right me-2"></i> Abbandona Gruppo
+                                </Dropdown.Item>
+                            </Dropdown.Menu>
+                        </Dropdown>
+                    </div>  
+                )}  
             </div>
 
             {/* MESSAGGES */}
@@ -179,4 +176,4 @@ function ChatWindow({ currentTeam, messages, user, errorMsg, setErrorMsg, newMes
     );
 }
 
-export default ChatWindow;
+export {ChatWindow};

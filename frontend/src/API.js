@@ -121,12 +121,12 @@ const getOnlineMembers = async (teamId) => {
     return await handleResponse(response);
 }
 
-const getMessages = async (teamId) => {
+const getTeamMessages = async (teamId) => {
     const response = await fetch(`${SERVER_URL}/messages?team_id=${teamId}`, { method: 'GET', credentials: 'include' });
     return await handleResponse(response);
 };
 
-const sendMessage = async (teamId, message) => {
+const sendTeamMessage = async (teamId, message) => {
     const response = await fetch(`${SERVER_URL}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -166,8 +166,43 @@ const leaveTeam = async (teamId) => {
     return await handleResponse(response);
 };
 
-// --- INVITI ---
+// --- CHAT ---
+const createPrivateChat = async (username) => {
+    const response = await fetch(`${SERVER_URL}/create/private`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username: username })
+    });
+    return await handleResponse(response);
+};
 
+const getChats = async () => {
+    const response = await fetch(`${SERVER_URL}/list/private`, { method: 'GET', credentials: 'include' });
+    return await handleResponse(response);
+};
+
+const getChatMessages = async (id) => {
+    const response = await fetch(`${SERVER_URL}/chat/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ chat_id: id })
+    });
+    return await handleResponse(response);
+};
+
+const sendPrivateMessage = async (id, msg, from, to) => {
+    const response = await fetch(`${SERVER_URL}/chat/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ chat_id: id , message: msg, from: from, to: to })
+    });
+    return await handleResponse(response);
+};
+
+// --- INVITI ---
 const inviteUser = async (username, teamId) => {
     const response = await fetch(`${SERVER_URL}/invite`, {
         method: 'POST',
@@ -206,9 +241,10 @@ const declineInvite = async (teamId) => {
 
 const API = { 
     register, logIn, logOut, getUserInfo,
-    getTeams, getOnlineMembers, getMessages, sendMessage, createTeam, renameTeam, leaveTeam,
+    getTeams, getOnlineMembers, getTeamMessages, sendTeamMessage, createTeam, renameTeam, leaveTeam,
     inviteUser, getInvites, acceptInvite, declineInvite,
-    getUnreadCounts, getTeamMembers, markAsRead
+    getUnreadCounts, getTeamMembers, markAsRead,
+    getChats, getChatMessages, sendPrivateMessage, createPrivateChat
 };
 
 export default API;

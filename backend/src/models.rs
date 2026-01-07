@@ -9,6 +9,26 @@ pub struct Team {
     pub name: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct ChatListRow {
+    pub id: i64,
+    pub other_username: String,
+    pub other_user_id: i64,
+}
+
+#[derive(Serialize, FromRow,Debug)]
+pub struct PrivateMessage{
+    pub id_chat: i64,
+    pub message: String,
+    pub data: String,
+    pub ora: String,
+    pub name1: String,
+    pub name2: String,
+    #[sqlx(rename = "type")]
+    #[serde(rename = "type")]
+    pub msg_type: String,
+}
+
 #[derive(Serialize, FromRow)]
 pub struct UnreadCount {
     pub id_team: i64,

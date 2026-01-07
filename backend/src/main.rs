@@ -22,7 +22,7 @@ use colored::*;
 use crate::{
     state::AppState,
     models::User,
-    handlers::{auth as h_auth, team as h_team},
+    handlers::{auth as h_auth, team as h_team,personal as h_personal},
     ws::websocket_handler
 };
 
@@ -35,7 +35,8 @@ async fn main() {
     let state = AppState::new(pool.clone());
     
     // Config Sessione
-    let session_config = SessionConfig::default().with_table_name("session_table").with_key(Key::generate());
+    let session_config = SessionConfig::default().with_table_name("session_table")
+        .with_key(Key::generate()).with_cookie_same_site(axum_session::SameSite::Lax);
     let session_store = SessionStore::<SessionSqlitePool>::new(Some(pool.clone().into()), session_config).await.unwrap();
     let auth_config = AuthConfig::<i64>::default().with_anonymous_user_id(Some(1));
 
@@ -57,6 +58,12 @@ async fn main() {
         .route("/login", post(h_auth::login))
         .route("/logout", get(h_auth::log_out))
         .route("/me", get(h_auth::get_me).route_layer(from_fn(auth_middleware)))
+        // Private Chat
+        .route("/create/private", post(h_personal::create_chat).route_layer(from_fn(auth_middleware)))
+        .route("/list/private", get(h_personal::get_chat_list).route_layer(from_fn(auth_middleware)))
+        .route("/chat/messages", post(h_personal::get_chat_messages).route_layer(from_fn(auth_middleware)))
+        .route("/chat/send", post(h_personal::send_chat_message).route_layer(from_fn(auth_middleware)))
+
         // Team Routes
         .route("/list/teams", get(h_team::get_teams).route_layer(from_fn(auth_middleware)))
         .route("/list/invites", get(h_team::get_list_invites).route_layer(from_fn(auth_middleware)))
@@ -75,8 +82,9 @@ async fn main() {
         .route("/unread-notifications", get(h_team::get_unread_notifications).route_layer(from_fn(auth_middleware)))
         .route("/mark-read/{team_id}", post(h_team::mark_as_read).route_layer(from_fn(auth_middleware)))
         // WebSocket
-        .route("/ws/team/{team_id}", get(websocket_handler).route_layer(from_fn(auth_middleware)))
-        
+        .route("/ws/team/{id}", get(websocket_handler).route_layer(from_fn(auth_middleware)))
+        .route("/ws/private/{id}", get(websocket_handler).route_layer(from_fn(auth_middleware)))
+
         // Layers
         .layer(AuthSessionLayer::<User, i64, SessionSqlitePool, SqlitePool>::new(Some(pool.clone())).with_config(auth_config))
         .layer(SessionLayer::new(session_store))
