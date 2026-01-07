@@ -6,23 +6,24 @@ export function CreateTeamModal({ show, onHide, value, onChange, onSubmit }) {
         <Modal show={show} onHide={onHide} centered>
             <Modal.Header closeButton><Modal.Title>Nuovo Gruppo</Modal.Title></Modal.Header>
             <Modal.Body>
-                <Form.Control type="text" placeholder="Nome..." value={value} onChange={(e) => onChange(e.target.value)} autoFocus />
+                <Form.Control type="text" placeholder="Nome gruppo..." value={value} onChange={(e) => onChange(e.target.value)} autoFocus />
             </Modal.Body>
             <Modal.Footer>
-                <Button variant="primary" onClick={onSubmit} disabled={!value.trim()}>Crea</Button>
+                <Button variant="primary" onClick={onSubmit} disabled={!value.trim()}>Crea gruppo</Button>
             </Modal.Footer>
         </Modal>
     );
 }
+
 export function CreateChatModal({ show, onHide, value, onChange, onSubmit }) {
     return (
         <Modal show={show} onHide={onHide} centered>
-            <Modal.Header closeButton><Modal.Title>Nuova Chat</Modal.Title></Modal.Header>
+            <Modal.Header closeButton><Modal.Title>Nuova Chat Privata</Modal.Title></Modal.Header>
             <Modal.Body>
-                <Form.Control type="text" placeholder="id utente..." value={value} onChange={(e) => onChange(e.target.value)} autoFocus />
+                <Form.Control type="text" placeholder="Username utente..." value={value} onChange={(e) => onChange(e.target.value)} autoFocus />
             </Modal.Body>
             <Modal.Footer>
-                <Button variant="primary" onClick={onSubmit} disabled={!value.trim()}>Crea</Button>
+                <Button variant="primary" onClick={onSubmit} disabled={!value.trim()}>Avvia chat</Button>
             </Modal.Footer>
         </Modal>
     );

@@ -39,7 +39,7 @@ pub async fn create_chat(Extension(user): Extension<User>, State(state): State<A
     }
     // 4. Verify if already exists a chat between these two users
     let existing_chat = sqlx::query_scalar::<_, i64>(
-        "SELECT id FROM private_chat_assoc WHERE (id_user1 = ?1 AND id_user2 = ?2) OR (id_user1 = ?2 AND id_user2 = ?1)")
+        "SELECT id FROM private_chats_assoc WHERE (id_user1 = ?1 AND id_user2 = ?2) OR (id_user1 = ?2 AND id_user2 = ?1)")
         .bind(user.id)
         .bind(target_user.id)
         .fetch_optional(&state.pool)
@@ -66,7 +66,7 @@ pub async fn get_chat_messages(Extension(user): Extension<User>, State(state): S
     }
 
     // INFO: name1 and name2 are respectively from and to
-    let rows: Vec<PrivateMessage> = sqlx::query_as("SELECT id_chat, message, data, ora, name1, name2, type FROM private_messages WHERE id_chat = ?1 ORDER BY id ASC")
+    let rows: Vec<PrivateMessage> = sqlx::query_as("SELECT id_chat, message, data, ora, name1, name2, type FROM private_messages WHERE id_chat = ?1")
     .bind(chat_id).fetch_all(&state.pool).await?;
 
     Ok(Json(rows))
@@ -83,15 +83,20 @@ pub async fn send_chat_message(Extension(user): Extension<User>, State(state): S
     }
 
     // Retrieve chat info (two users)
-    let chat_info: PrivateAssoc = sqlx::query_as(
-        "SELECT id, id_user1, id_user2 FROM private_chats_assoc WHERE id = ?1"
+    let (n1, n2): (String, String) = sqlx::query_as(
+        r#"
+        SELECT u1.username, u2.username 
+        FROM private_chats_assoc c
+        JOIN user u1 ON c.id_user1 = u1.id
+        JOIN user u2 ON c.id_user2 = u2.id
+        WHERE c.id = ?1 AND (c.id_user1 = ?2 OR c.id_user2 = ?2)
+        "#
     )
     .bind(chat_id)
-    .fetch_one(&state.pool)
-    .await?;
-
-    let user1: UserSql = sqlx::query_as("SELECT id, username, password FROM user WHERE id = ?1").bind(chat_info.id_user1).fetch_one(&state.pool).await?;
-    let user2: UserSql = sqlx::query_as("SELECT id, username, password FROM user WHERE id = ?1").bind(chat_info.id_user2).fetch_one(&state.pool).await?;
+    .bind(user.id)
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or(AppError::Forbidden)?;
 
     // Insert new chat message
     sqlx::query(
@@ -102,8 +107,8 @@ pub async fn send_chat_message(Extension(user): Extension<User>, State(state): S
     )
     .bind(chat_id)
     .bind(message)
-    .bind(&user1.username)
-    .bind(&user2.username)
+    .bind(n1)
+    .bind(n2)
     .execute(&state.pool)
     .await?;
 

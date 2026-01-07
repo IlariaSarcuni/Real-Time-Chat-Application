@@ -9,13 +9,6 @@ pub struct Team {
     pub name: String,
 }
 
-#[derive(Serialize, FromRow)]
-pub struct PrivateAssoc{
-    pub id: i64,
-    pub id_user1: i64,
-    pub id_user2: i64
-}
-
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ChatListRow {
     pub id: i64,
@@ -25,15 +18,15 @@ pub struct ChatListRow {
 
 #[derive(Serialize, FromRow,Debug)]
 pub struct PrivateMessage{
-    pub id_chat:i64,
-    pub message:String,
-    pub data:String,
-    pub ora:String,
-    pub name1:String,
-    pub name2:String,
+    pub id_chat: i64,
+    pub message: String,
+    pub data: String,
+    pub ora: String,
+    pub name1: String,
+    pub name2: String,
     #[sqlx(rename = "type")]
     #[serde(rename = "type")]
-    pub msg_type:String,
+    pub msg_type: String,
 }
 
 #[derive(Serialize, FromRow)]

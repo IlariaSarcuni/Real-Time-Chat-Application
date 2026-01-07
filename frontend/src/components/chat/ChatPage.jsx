@@ -39,17 +39,35 @@ function ChatPage({ user }) {
     const [renameValue, setRenameValue] = useState("");
 
     const [showCreatePrivateModal, setShowCreatePrivateModal] = useState(false);
-    const [newChatName, setNewChatName] = useState("");
+    const [newChatName, setNewChatName] = useState("");     // username
 
     const chatBg = theme === 'dark' ? '#212529' : '#e5ddd5';    // move
     // --- EFFETTI & API ---
-    const refreshAllData = useCallback(() => {
-        if (!user) return;
-
-        API.getTeams().then(ts => setTeams(Array.isArray(ts) ? ts : [])).catch(e => console.error(e));
-        API.getChats().then(c => setChats(Array.isArray(c) ? c : [])).catch(e => console.error(e));
-        API.getInvites().then(inv => setInvites(Array.isArray(inv) ? inv : [])).catch(e => console.error(e));
-        API.getUnreadCounts().then(data => setNotifications(data)).catch(e => console.error(e));
+    const refreshAllData = useCallback(async () => {
+        if (!user) return { teams: [], chats: [], invites: [] };
+    
+        try {
+            const [ts, c, inv, unread] = await Promise.all([
+                API.getTeams(),
+                API.getChats(),
+                API.getInvites(),
+                API.getUnreadCounts()
+            ]);
+    
+            const teamsData = Array.isArray(ts) ? ts : [];
+            const chatsData = Array.isArray(c) ? c : [];
+            const invitesData = Array.isArray(inv) ? inv : [];
+    
+            setTeams(teamsData);
+            setChats(chatsData);
+            setInvites(invitesData);
+            setNotifications(unread || {});
+    
+            return { teams: teamsData, chats: chatsData, invites: invitesData };
+        } catch (e) {
+            console.error("Errore nel refresh dei dati:", e);
+            return { teams: [], chats: [], invites: [] };
+        }
     }, [user]);
 
     useEffect(() => {
@@ -165,10 +183,18 @@ function ChatPage({ user }) {
 
     const handleCreatePrivate = async () => {
         try {
-            await API.createPrivateChat(parseInt(newChatName, 10));
+            const response = await API.createPrivateChat(newChatName);   // id, success, message
+            let chat_id = response.id;
+
             setShowCreatePrivateModal(false); 
             setNewChatName(""); 
-            refreshAllData();
+
+            const updatedData = refreshAllData();
+            const newChatData = updatedData.chats.find(c => c.id === chat_id);
+
+            if (newChatData) {
+                setActiveRoom({ type: 'private', id: chat_id, data: newChatData });
+            }
         } catch (err) { 
             alert(err.message); 
         }

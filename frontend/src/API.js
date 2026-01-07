@@ -167,12 +167,12 @@ const leaveTeam = async (teamId) => {
 };
 
 // --- CHAT ---
-const createPrivateChat = async (other_user_id) => {
+const createPrivateChat = async (username) => {
     const response = await fetch(`${SERVER_URL}/create/private`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ user_id: other_user_id })
+        body: JSON.stringify({ username: username })
     });
     return await handleResponse(response);
 };
