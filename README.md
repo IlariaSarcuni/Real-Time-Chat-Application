@@ -13,7 +13,20 @@ Ruggine Chat è una piattaforma di messaggistica istantanea progettata per lo sc
 Il progetto è organizzato in due macro cartelle, pensate per separare la logica di sistema dalla parte relativa all'interfaccia utente.
 
 **⚙️ Backend `/backend`**
+- `ws.rs` : Gestione Web-Socket ;
+- `tasks.rs` : Logger per le prestazioni della CPU;
+- `state.rs` : Definizione stati dell'applicazioen;
+- `models.rs` : Definizioni struct generali e funzione di autenticazione;
+- `main.rs` : Programma principale , Routes e middleware di autenticazione;
+- `error.rs` : Definizione errori;
+- HANDLERS:
+  - `auth.rs` : Funzioni registrazione e login
+  - `mod.rs` : Moduli;
+  - `personal.rs` : Gestione chat privata;
+  - `team.rs` : Gestione chat di gruppo;
+  - `presence.rs` : Logica di controllo utente online;
 
+\
 **🎨 Frontend `/frontend`**
 - `App` (in `src/App.jsx`): componente principale dell'applicazione. Avvolge tutti i componenti in un *ThemeContext.Provider* per gestire il tema (chiaro oppure scuro) e utilizza *Routes* e *Route* di *react-router-dom* per definire la navigazione;
 - `LoginForm` (in `src/components/auth/AuthComponents.jsx`): contiene il form per effettuare il login, con i due campi di input necessari (*Username* e *Password*). Controlla le credenziali inserite (dopo aver cliccato sul bottone *Accedi*) e reindirizza l'utente alla pagina in cui partecipare ad una conversazione, in caso di login effettuato con successo. Il form contiene anche un bottone *Registrati* che rimanda l'utente alla pagina di registrazione;
