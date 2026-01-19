@@ -50,7 +50,7 @@ pub struct MessageResponse {
     pub data: String,
     #[sqlx(rename = "type")]
     #[serde(rename = "type")]
-    pub msg_type: String,   // to distinguish 'chat' from 'system' message
+    pub msg_type: String,   
 }
 
 #[derive(Serialize, FromRow)]

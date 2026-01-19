@@ -7,3 +7,11 @@
 [07-01-2026 16:17:21] CPU Usage: 1.47% | Total Run Time: 120s
 [07-01-2026 16:19:21] CPU Usage: 0.66% | Total Run Time: 240s
 [07-01-2026 16:22:10] CPU Usage: 1.28% | Total Run Time: 121s
+[07-01-2026 16:24:10] CPU Usage: 0.34% | Total Run Time: 241s
+[07-01-2026 16:26:10] CPU Usage: 0.05% | Total Run Time: 361s
+[19-01-2026 09:52:38] CPU Usage: 0.72% | Total Run Time: 122s
+[19-01-2026 09:54:38] CPU Usage: 1.17% | Total Run Time: 242s
+[19-01-2026 09:56:38] CPU Usage: 1.04% | Total Run Time: 362s
+[19-01-2026 09:58:38] CPU Usage: 0.47% | Total Run Time: 482s
+[19-01-2026 10:00:38] CPU Usage: 1.30% | Total Run Time: 602s
+[19-01-2026 10:11:48] CPU Usage: 2.03% | Total Run Time: 121s

@@ -10,22 +10,22 @@ import { CreateChatModal, CreateTeamModal, InviteModal, MembersModal, RenameModa
 function ChatPage({ user }) {
     const theme = useContext(ThemeContext);
 
-    // --- STATI DATI ---
+    //STATI DATI
     const [teams, setTeams] = useState([]);
     const [chats, setChats] = useState([]);
     const [invites, setInvites] = useState([]);
-    const [notifications, setNotifications] = useState({}); // {room_id: count}
+    const [notifications, setNotifications] = useState({}); 
 
-    // --- ACTIVE ROOM ---
+    //ACTIVE ROOM
     const [activeRoom, setActiveRoom] = useState({ type: null, id: null, data: null });
     const [messages, setMessages] = useState([]);
     const [onlineMembers, setOnlineMembers] = useState([]);
 
-    // --- STATI INPUT & UI ---
+    //STATI INPUT & UI
     const [newMessage, setNewMessage] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
 
-    // --- STATI MODALI ---
+    //STATI MODALI
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newTeamName, setNewTeamName] = useState("");
     const [showInviteModal, setShowInviteModal] = useState(false);
@@ -56,7 +56,7 @@ function ChatPage({ user }) {
             const chatsData = Array.isArray(c) ? c : [];
             const invitesData = Array.isArray(inv) ? inv : [];
             
-            // Combina le notifiche di team e chat private
+            //Notifiche di team e chat private
             const allNotifications = { ...(unreadTeams || {}), ...(unreadChats || {}) };
 
             setTeams(teamsData);
@@ -77,7 +77,7 @@ function ChatPage({ user }) {
         return () => clearInterval(interval);
     }, [refreshAllData]);
 
-    // --- WEBSOCKET & INITIAL LOAD ---
+    //WEBSOCKET & INITIAL LOAD
     useEffect(() => {
         if (!activeRoom.id) return;
 
@@ -96,7 +96,6 @@ function ChatPage({ user }) {
                     if (isMounted) setOnlineMembers(Array.from(new Set(usernames)));
                 } else {
                     msgs = await API.getChatMessages(activeRoom.id);
-                    // Global presence: check other user online by id
                     try {
                         const res = await API.isUserOnline(activeRoom.data?.other_user_id);
                         if (isMounted) setOnlineMembers(res.online ? [activeRoom.data?.other_username] : []);
@@ -142,12 +141,10 @@ function ChatPage({ user }) {
                             if (incomingId === activeRoom.id) {
                                 setMessages(prev => [...prev, data]);
                             } else {
-                                // Le notifiche vengono gestite dal backend tramite API polling
-                                // Non incrementiamo più manualmente qui
+                                // Le notifiche vengono gestite dal backend
                             }
                         }
                     } else if (data.type === "online" || data.type === "offline") {
-                        // For teams, refresh from API to reflect global presence
                         if (activeRoom.type === 'team') {
                             API.getOnlineMembers(activeRoom.id)
                                 .then(list => {
@@ -175,9 +172,9 @@ function ChatPage({ user }) {
             isMounted = false;
             if (socket) socket.close();
         };
-    }, [activeRoom, user.username]); // Corretta dipendenza activeRoom per ESLint
+    }, [activeRoom, user.username]); 
 
-    // --- HANDLERS ---
+    //HANDLERS
     const handleSendMessage = async (e) => {
         e.preventDefault();
         if (!newMessage.trim() || !activeRoom.id) return;
@@ -214,7 +211,6 @@ function ChatPage({ user }) {
             setShowCreatePrivateModal(false);
             setNewChatName("");
 
-            // Correzione asincrona: attendi i nuovi dati
             const updated = await refreshAllData();
             const newChatData = updated.chats.find(c => c.id === chat_id);
             if (newChatData) {
@@ -267,7 +263,6 @@ function ChatPage({ user }) {
         }
     };
 
-    // Azione centralizzata per aprire il modal invito resettando l'input
     const handleOpenInvite = () => {
         setInviteUsername("");
         setShowInviteModal(true);

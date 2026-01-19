@@ -131,7 +131,6 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
                                     <div className={`p-2 px-3 rounded-3 shadow-sm border ${bubbleClass}`}
                                         style={{ maxWidth: '75%', minWidth: '120px', position: 'relative', border: theme === 'dark' ? '1px solid #444' : '' }}>
                                         
-                                        {/* MODIFICA QUI: Mostra il nome solo se è un gruppo (isTeam) e non è il mio messaggio */}
                                         {isTeam && !isMine && (
                                             <div className="fw-bold small mb-1" style={{ color: userColor }}>
                                                 ~ {senderName}
