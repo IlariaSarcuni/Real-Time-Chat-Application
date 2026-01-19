@@ -2,7 +2,6 @@ use axum::{Extension, Json, extract::{State, Query, Path}, http::StatusCode, res
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use chrono::Local;
-use colored::*;
 
 use crate::{models::*, error::AppError, state::AppState};
 
@@ -34,7 +33,7 @@ pub async fn get_list_invites(Extension(user): Extension<User>, State(state): St
 
 pub async fn get_team_members(Extension(user): Extension<User>, State(state): State<AppState>, Path(team_id): Path<i64>) -> Result<impl IntoResponse, AppError> {
     if !check_membership(user.id, team_id, &state.pool).await? { return Err(AppError::Forbidden); }
-    let members: Vec<MemberResponse> = sqlx::query_as("SELECT u.username FROM user u INNER JOIN user_team ut ON ut.id_user = u.id WHERE ut.id_team = ?1")
+    let members: Vec<MemberResponse> = sqlx::query_as("SELECT u.username FROM user u INNER JOIN user_team ut ON ut.id_user = u.id WHERE ut.id_team = ?1 ORDER BY u.username")
         .bind(team_id).fetch_all(&state.pool).await?;
     Ok(Json(members))
 }
@@ -169,7 +168,7 @@ pub async fn leave_team(Extension(user): Extension<User>, State(state): State<Ap
         let system_message = format!(r#"{{"type": "system", "message": "{} ha abbandonato il gruppo", "username": "{}", "event": "left"}}"#, user.username, user.username);
         if let Some(tx) = state.chat_rooms.get(&team_id) {
             let _ = tx.send(system_message.clone());
-            println!("{} {}", "[INFO]".cyan(), system_message);
+            //println!("{} {}", "[INFO]".cyan(), system_message);
         }
         return Ok(Json(json!({
             "success": true,
@@ -186,7 +185,7 @@ pub async fn leave_team(Extension(user): Extension<User>, State(state): State<Ap
     let system_message = format!(r#"{{"type": "system", "message": "{} ha abbandonato il gruppo", "username": "{}", "event": "left"}}"#, user.username, user.username);
     if let Some(tx) = state.chat_rooms.get(&team_id) {
         let _ = tx.send(system_message.clone());
-        println!("{} {}", "[INFO]".cyan(), system_message);
+        //println!("{} {}", "[INFO]".cyan(), system_message);
     }
 
     Ok(Json(json!({ "success": true, "message": "Hai abbandonato il gruppo." })))
@@ -254,7 +253,7 @@ pub async fn accept(Extension(user): Extension<User>, State(state): State<AppSta
     let system_message = format!(r#"{{"type": "system", "message": "{} è entrato nel gruppo", "username": "{}", "event": "joined"}}"#, user.username, user.username);
     if let Some(tx) = state.chat_rooms.get(&team_id) {
         let _ = tx.send(system_message.clone());
-        println!("{} {}", "[INFO]".cyan(), system_message);
+        //println!("{} {}", "[INFO]".cyan(), system_message);
     }
 
     Ok(Json(json!({ "success": true, "message": "Invito accettato!" })))

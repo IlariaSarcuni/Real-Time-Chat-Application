@@ -7,7 +7,6 @@ use futures_util::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::broadcast;
 use std::collections::HashSet;
 use std::sync::Arc;
-use colored::*;
 
 use crate::{models::User, state::AppState};
 
@@ -29,14 +28,14 @@ pub async fn websocket_handler(
         if is_member.is_err() {
             return (StatusCode::FORBIDDEN, "Accesso negato: Non sei membro del gruppo").into_response();
         }
-        println!("{} {} connesso al team {}", "[INFO]".cyan(), user.username, id);
+        //println!("{} {} connesso al team {}", "[INFO]".cyan(), user.username, id);
     } else {    // private
         let is_participant = sqlx::query_scalar::<_, i64>("SELECT id FROM private_chats_assoc WHERE id = ?1 AND (id_user1 = ?2 OR id_user2 = ?2)")
             .bind(id).bind(user.id).fetch_one(&state.pool).await;
         if is_participant.is_err() { 
             return (StatusCode::FORBIDDEN, "Accesso negato: Non sei partecipante di questa chat").into_response();
         }
-        println!("{} {} partecipa alla chat {}", "[INFO]".cyan(), user.username, id);
+        //println!("{} {} partecipa alla chat {}", "[INFO]".cyan(), user.username, id);
     }
 
     ws.on_upgrade(move |socket| handle_socket(socket, user, state, id))
@@ -48,7 +47,7 @@ async fn handle_socket(socket: WebSocket, user: User, state: AppState, team_id: 
     {
         let mut users = team_users.lock().await;
         users.insert(user.id);
-        println!("{} {} is online", "[INFO]".cyan(), user.username);
+        //println!("{} {} is online", "[INFO]".cyan(), user.username);
 
         let message = format!(r#"{{"type": "online", "user_id": {}, "username": "{}"}}"#, user.id, user.username);
         if let Some(tx_chat) = state.chat_rooms.get(&team_id) {
@@ -79,7 +78,7 @@ async fn handle_socket(socket: WebSocket, user: User, state: AppState, team_id: 
     {
         let mut users = team_users.lock().await;
         users.remove(&user.id);
-        println!("{} {} is offline", "[INFO]".cyan(), user.username);
+        //println!("{} {} is offline", "[INFO]".cyan(), user.username);
 
         let message = format!(r#"{{"type": "offline", "user_id": {}, "username": "{}"}}"#, user.id, user.username);
         if let Some(tx_chat) = state.chat_rooms.get(&team_id) {
@@ -87,5 +86,5 @@ async fn handle_socket(socket: WebSocket, user: User, state: AppState, team_id: 
         }
     }
 
-    println!("{} User {} disconnected from team {}", "[INFO]".cyan(), user.username, team_id);
+    //println!("{} User {} disconnesso dal team {}", "[INFO]".cyan(), user.username, team_id);
 }

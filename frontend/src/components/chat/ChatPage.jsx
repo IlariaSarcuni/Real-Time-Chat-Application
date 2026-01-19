@@ -56,8 +56,16 @@ function ChatPage({ user }) {
             const chatsData = Array.isArray(c) ? c : [];
             const invitesData = Array.isArray(inv) ? inv : [];
             
-            //Notifiche di team e chat private
-            const allNotifications = { ...(unreadTeams || {}), ...(unreadChats || {}) };
+            //Notifiche di team e chat private (con prefisso per evitare collisioni)
+            const teamNotifs = Object.entries(unreadTeams || {}).reduce((acc, [id, count]) => {
+                acc[`team_${id}`] = count;
+                return acc;
+            }, {});
+            const chatNotifs = Object.entries(unreadChats || {}).reduce((acc, [id, count]) => {
+                acc[`chat_${id}`] = count;
+                return acc;
+            }, {});
+            const allNotifications = { ...teamNotifs, ...chatNotifs };
 
             setTeams(teamsData);
             setChats(chatsData);
@@ -140,6 +148,9 @@ function ChatPage({ user }) {
                             // Messaggi di altri utenti
                             if (incomingId === activeRoom.id) {
                                 setMessages(prev => [...prev, data]);
+                                // Azzera notifica se sei già nella chat attiva
+                                const notifKey = activeRoom.type === 'team' ? `team_${activeRoom.id}` : `chat_${activeRoom.id}`;
+                                setNotifications(prev => ({ ...prev, [notifKey]: 0 }));
                             } else {
                                 // Le notifiche vengono gestite dal backend
                             }
@@ -186,6 +197,15 @@ function ChatPage({ user }) {
                 await API.sendPrivateMessage(activeRoom.id, newMessage, user.username, recipientName);
             }
             setNewMessage("");
+            
+            // Reset notifica quando invii un messaggio
+            const notifKey = activeRoom.type === 'team' ? `team_${activeRoom.id}` : `chat_${activeRoom.id}`;
+            setNotifications(prev => ({ ...prev, [notifKey]: 0 }));
+            if (activeRoom.type === 'team') {
+                await API.markAsRead(activeRoom.id).catch(err => console.error("Errore markAsRead:", err));
+            } else {
+                await API.markPrivateAsRead(activeRoom.id).catch(err => console.error("Errore markAsRead:", err));
+            }
         } catch (err) {
             console.error(err);
             setErrorMsg("Errore nell'invio del messaggio");
@@ -240,8 +260,9 @@ function ChatPage({ user }) {
             setErrorMsg("Impossibile caricare i messaggi.");
         }
 
-        if (notifications[roomData.id] > 0) {
-            setNotifications(prev => ({ ...prev, [roomData.id]: 0 }));
+        const notifKey = type === 'team' ? `team_${roomData.id}` : `chat_${roomData.id}`;
+        if (notifications[notifKey] > 0) {
+            setNotifications(prev => ({ ...prev, [notifKey]: 0 }));
             if (type === 'team') {
                 await API.markAsRead(roomData.id).catch(err => console.error("Errore markAsRead:", err));
             } else {
@@ -302,7 +323,7 @@ function ChatPage({ user }) {
         API.acceptInvite(id)
             .then(async () => {
                 await refreshAllData();
-                setNotifications(prev => ({ ...prev, [id]: 0 })); // Pulisci notifiche dopo refresh
+                setNotifications(prev => ({ ...prev, [`team_${id}`]: 0 })); // Pulisci notifiche dopo refresh (gli inviti sono per team)
                 await API.markAsRead(id).catch(err => console.error("Errore markAsRead:", err)); // Marca come letto nel backend
             })
             .catch(e => console.error(e));
@@ -342,9 +363,9 @@ function ChatPage({ user }) {
                         </div>
                         <ListGroup variant="flush">
                             {teams.map(team => (
-                                <ListGroup.Item key={team.id} action active={activeRoom.id === team.id} onClick={() => handleSelectActiveRoom('team', team)} className="border-0 rounded-3 mb-1 d-flex align-items-center">
+                                <ListGroup.Item key={team.id} action active={activeRoom.type === 'team' && activeRoom.id === team.id} onClick={() => handleSelectActiveRoom('team', team)} className="border-0 rounded-3 mb-1 d-flex align-items-center">
                                     <span className="text-truncate small"><i className="bi bi-hash me-1"></i> {team.name}</span>
-                                    {notifications[team.id] > 0 && <Badge bg="danger" pill className="ms-auto">{notifications[team.id]}</Badge>}
+                                    {notifications[`team_${team.id}`] > 0 && <Badge bg="danger" pill className="ms-auto">{notifications[`team_${team.id}`]}</Badge>}
                                 </ListGroup.Item>
                             ))}
                         </ListGroup>
@@ -355,9 +376,9 @@ function ChatPage({ user }) {
                         </div>
                         <ListGroup variant="flush">
                             {chats.map(chat => (
-                                <ListGroup.Item key={chat.id} action active={activeRoom.id === chat.id} onClick={() => handleSelectActiveRoom('private', chat)} className="border-0 rounded-3 mb-1 d-flex align-items-center">
+                                <ListGroup.Item key={chat.id} action active={activeRoom.type === 'private' && activeRoom.id === chat.id} onClick={() => handleSelectActiveRoom('private', chat)} className="border-0 rounded-3 mb-1 d-flex align-items-center">
                                     <span className="text-truncate small"><i className="bi bi-person me-1"></i> {chat.other_username}</span>
-                                    {notifications[chat.id] > 0 && <Badge bg="danger" pill className="ms-auto">{notifications[chat.id]}</Badge>}
+                                    {notifications[`chat_${chat.id}`] > 0 && <Badge bg="danger" pill className="ms-auto">{notifications[`chat_${chat.id}`]}</Badge>}
                                 </ListGroup.Item>
                             ))}
                         </ListGroup>
