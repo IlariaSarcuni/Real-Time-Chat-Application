@@ -68,22 +68,24 @@ function App() {
     window.location.href = '/login';
   };
 
-  // Global presence heartbeat while logged in
+  // Global presence
   useEffect(() => {
-    let timer;
-    const beat = async () => {
-      try { await API.heartbeatPresence(); } catch { /* noop */ }
-    };
+    let socket;
     if (loggedIn) {
-      beat();
-      timer = setInterval(beat, 30000); // every 30s
-    }
-    return () => { if (timer) clearInterval(timer); };
-  }, [loggedIn]);
+      const { hostname, protocol } = window.location;
+      const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsPort = '3000';
+      
+      socket = new WebSocket(`${wsProtocol}//${hostname}:${wsPort}/ws/global`);
 
-  if (loadingInfo) {
-    return <div className="p-5 text-center">Caricamento Ruggine...</div>;
-  }
+      socket.onopen = () => console.log("Presenza globale attiva");
+      socket.onclose = () => console.log("Presenza globale chiusa");
+    }
+
+  return () => {
+    if (socket) socket.close();
+  };
+}, [loggedIn]);
 
   return (
     <ThemeContext.Provider value={theme}>

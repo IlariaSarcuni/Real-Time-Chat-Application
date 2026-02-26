@@ -1,8 +1,8 @@
+mod ws;
 mod error;
 mod state;
-mod models;
-mod ws;
 mod tasks;
+mod models;
 mod handlers;
 
 use axum::{
@@ -23,41 +23,43 @@ use crate::{
     state::AppState,
     models::User,
     handlers::{auth as h_auth, team as h_team,personal as h_personal, presence as h_presence},
-    ws::websocket_handler
+    ws::{websocket_handler, global_presence_handler},
 };
 
 #[tokio::main]
 async fn main() {
-    // Connessione al DB
+
+    // 1. Database connection
     let pool = SqlitePool::connect("sqlite://db.sqlite").await.expect("\nERRORE: db.sqlite non trovato.\n");
     
-    // Inizializza lo stato (DB + Chat)
+    // 2. Initialize state (database, chat, online users, presence map)
     let state = AppState::new(pool.clone());
     
-    // Config Sessione
+    // 3. Config Session (id expires session)
     let session_config = SessionConfig::default().with_table_name("session_table")
         .with_key(Key::generate()).with_cookie_same_site(axum_session::SameSite::Lax);
     let session_store = SessionStore::<SessionSqlitePool>::new(Some(pool.clone().into()), session_config).await.unwrap();
     let auth_config = AuthConfig::<i64>::default().with_anonymous_user_id(Some(1));
 
-    // Avvio Background Task
+    // 4. Background cpu task
     tokio::spawn(tasks::cpu_logger_task());
 
-    // CORS
+    // 5. CORS
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
         .allow_credentials(true)
         .allow_headers([CONTENT_TYPE, AUTHORIZATION])
         .allow_origin(AllowOrigin::mirror_request());
 
-    // Routing
+    // 6. Routing System
     let app = Router::new()
         .route("/", get(|| async { "Backend Online" }))
-        // Auth Routes
+        // Authetication
         .route("/register", post(h_auth::register))
         .route("/login", post(h_auth::login))
         .route("/logout", get(h_auth::log_out))
         .route("/me", get(h_auth::get_me).route_layer(from_fn(auth_middleware)))
+
         // Private Chat
         .route("/create/private", post(h_personal::create_chat).route_layer(from_fn(auth_middleware)))
         .route("/list/private", get(h_personal::get_chat_list).route_layer(from_fn(auth_middleware)))
@@ -85,13 +87,13 @@ async fn main() {
         // Notifications
         .route("/unread-notifications", get(h_team::get_unread_notifications).route_layer(from_fn(auth_middleware)))
         .route("/mark-read/{team_id}", post(h_team::mark_as_read).route_layer(from_fn(auth_middleware)))
+
         // Presence (global)
-        .route("/presence/heartbeat", post(h_presence::heartbeat).route_layer(from_fn(auth_middleware)))
         .route("/presence/user/{id}", get(h_presence::is_online).route_layer(from_fn(auth_middleware)))
         // WebSocket
         .route("/ws/team/{id}", get(websocket_handler).route_layer(from_fn(auth_middleware)))
         .route("/ws/private/{id}", get(websocket_handler).route_layer(from_fn(auth_middleware)))
-        .route("/ws/global", get(ws::global_presence_handler))
+        .route("/ws/global", get(global_presence_handler).route_layer(from_fn(auth_middleware)))
 
         // Layers
         .layer(AuthSessionLayer::<User, i64, SessionSqlitePool, SqlitePool>::new(Some(pool.clone())).with_config(auth_config))
@@ -104,16 +106,15 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-// Middleware di autenticazione per le route protette
-async fn auth_middleware(
-    auth: AuthSession<User, i64, SessionSqlitePool, SqlitePool>, 
-    mut req: axum::extract::Request, 
-    next: axum::middleware::Next
-) -> impl IntoResponse { 
+// Authentication middleware for protected routes
+async fn auth_middleware(auth: AuthSession<User, i64, SessionSqlitePool, SqlitePool>, 
+    mut req: axum::extract::Request, next: axum::middleware::Next) -> impl IntoResponse { 
+
     if auth.is_authenticated() {
         req.extensions_mut().insert(auth.current_user.unwrap().clone());
         next.run(req).await
     } else {
         (axum::http::StatusCode::UNAUTHORIZED, "Non autorizzato").into_response()
     }
+
 }

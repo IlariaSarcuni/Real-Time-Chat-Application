@@ -1,3 +1,11 @@
+/* ========================================================================
+ * WEBSOCKET SERVER - REAL TIME MESSAGING AND PRESENCE CONTROL
+ * ========================================================================
+ * This module handles persistent connessions for team and private chats, 
+ * presence monitoring, and access control. Verify user permissions before 
+ * upgrading HTTP requests to WebSocket connections.
+ */
+
 use axum::{
     extract::{ws::{Message, WebSocket, WebSocketUpgrade}, Path, State},
     response::IntoResponse,
@@ -9,14 +17,9 @@ use serde_json::json;
 
 use crate::{models::User, state::AppState};
 
-pub async fn websocket_handler(
-    ws: WebSocketUpgrade,
-    Extension(user): Extension<User>,
-    State(state): State<AppState>,
-    uri: Uri,       // understand if team or private
-    Path(id): Path<i64>    // generic id
-) -> impl IntoResponse {
-    let path = uri.path();
+pub async fn websocket_handler(ws: WebSocketUpgrade, Extension(user): Extension<User>, State(state): State<AppState>, uri: Uri, Path(id): Path<i64>) -> impl IntoResponse {
+
+    let path = uri.path();  // /ws/team/{id} or /ws/private/{id}
 
     if path.contains("/ws/team") {
         let is_member = sqlx::query_scalar::<_, i64>("SELECT id_user FROM user_team WHERE id_user = ?1 AND id_team = ?2")
@@ -27,7 +30,7 @@ pub async fn websocket_handler(
         if is_member.is_err() {
             return (StatusCode::FORBIDDEN, "Accesso negato: Non sei membro del gruppo").into_response();
         }
-    } else {    // private
+    } else {
         let is_participant = sqlx::query_scalar::<_, i64>("SELECT id FROM private_chats_assoc WHERE id = ?1 AND (id_user1 = ?2 OR id_user2 = ?2)")
             .bind(id).bind(user.id)
             .fetch_one(&state.pool)
@@ -38,22 +41,20 @@ pub async fn websocket_handler(
         }
     }
 
-    ws.on_upgrade(move |socket| handle_socket(socket, state, user, id))
+    ws.on_upgrade(move |socket| handle_socket(socket, state, id))
 }
 
-async fn handle_socket(socket: WebSocket, state: AppState, user: User, room_id: i64) {
+async fn handle_socket(socket: WebSocket, state: AppState, room_id: i64) {
 
-    notify_presence(&state, &user, true).await;
-
+    // tx and rx for internal broadcast. sender and receiver for managing the direct ws link to the user.
     let tx = state.chat_rooms
         .entry(room_id)
         .or_insert_with(|| broadcast::channel(100).0)
         .clone();
-    
     let mut rx = tx.subscribe();
     let (mut sender, mut receiver) = socket.split();
 
-    // Task for SEND message
+    // Monitor incoming messages and detect when the user disconnets
     let mut send_task = tokio::spawn(async move {
         while let Ok(msg) = rx.recv().await {
             if sender.send(Message::Text(msg.into())).await.is_err() {
@@ -62,7 +63,6 @@ async fn handle_socket(socket: WebSocket, state: AppState, user: User, room_id: 
         }
     });
 
-    // Task for RECV message
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             if let Message::Close(_) = msg {
@@ -76,60 +76,55 @@ async fn handle_socket(socket: WebSocket, state: AppState, user: User, room_id: 
         _ = &mut recv_task => send_task.abort(),
     }
 
-    notify_presence(&state, &user, false).await;
 }
 
-// Helper function to notify presence to all channels of user
 async fn notify_presence(state: &AppState, user: &User, is_online: bool) {
-    let state = state.clone();
-    let user = user.clone();
 
-    tokio::spawn(async move {
-        let event_type = if is_online { "online" } else { "offline" };
-        let payload = json!({
-            "type": event_type,
-            "user_id": user.id,
-            "username": user.username
-        }).to_string();
+    let event_type = if is_online { "online" } else { "offline" };
+    let payload = json!({
+        "type": event_type,
+        "user_id": user.id,
+        "username": user.username
+    }).to_string();
 
-        // All teams the user belongs to
-        let teams = sqlx::query_scalar::<_, i64>(
-            "SELECT id_team FROM user_team WHERE id_user = ?"
-        )
-        .bind(user.id)
-        .fetch_all(&state.pool)
-        .await.unwrap_or_default();
+    // All teams the user belongs to
+    let teams = sqlx::query_scalar::<_, i64>(
+        "SELECT id_team FROM user_team WHERE id_user = ?"
+    )
+    .bind(user.id)
+    .fetch_all(&state.pool)
+    .await.unwrap_or_default();
 
-        // All private chats of the user
-        let privates = sqlx::query_scalar::<_, i64>(
-            "SELECT id FROM private_chats_assoc WHERE id_user1 = ? OR id_user2 = ?"
-        )
-        .bind(user.id).bind(user.id)
-        .fetch_all(&state.pool).await.unwrap_or_default();
+    // All private chats of the user
+    let privates = sqlx::query_scalar::<_, i64>(
+        "SELECT id FROM private_chats_assoc WHERE id_user1 = ? OR id_user2 = ?"
+    )
+    .bind(user.id).bind(user.id)
+    .fetch_all(&state.pool)
+    .await.unwrap_or_default();
 
-        // Notify all active channels
-        for id in teams.into_iter().chain(privates.into_iter()) {
-            if let Some(tx) = state.chat_rooms.get(&id) {
-                let _ = tx.send(payload.clone());
-            }
+    // Notify all active channels
+    for id in teams.into_iter().chain(privates.into_iter()) {
+        if let Some(tx) = state.chat_rooms.get(&id) {
+            let _ = tx.send(payload.clone());
         }
-    });
+    }
+
 }
 
-pub async fn global_presence_handler(
-    ws: WebSocketUpgrade,
-    Extension(user): Extension<User>,
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+// Track global user presence. Online as soon as the app is opened. Offline when it is closed
+pub async fn global_presence_handler(ws: WebSocketUpgrade, Extension(user): Extension<User>, State(state): State<AppState>) -> impl IntoResponse {
+    
     ws.on_upgrade(move |socket| async move {
-        // As soon as the user opens the app -> online
+        
+        state.presence_map.insert(user.id, std::time::Instant::now());
         notify_presence(&state, &user, true).await;
 
         let (mut _sender, mut receiver) = socket.split();
         
         while let Some(Ok(_)) = receiver.next().await {}
 
-        // As soon as the user closes the app -> offline
+        state.presence_map.remove(&user.id);
         notify_presence(&state, &user, false).await;
     })
 }
