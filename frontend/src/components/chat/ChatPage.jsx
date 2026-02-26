@@ -10,22 +10,22 @@ import { CreateChatModal, CreateTeamModal, InviteModal, MembersModal, RenameModa
 function ChatPage({ user }) {
     const theme = useContext(ThemeContext);
 
-    //STATI DATI
+    // STATI DATI
     const [teams, setTeams] = useState([]);
     const [chats, setChats] = useState([]);
     const [invites, setInvites] = useState([]);
     const [notifications, setNotifications] = useState({}); 
 
-    //ACTIVE ROOM
+    // ACTIVE ROOM
     const [activeRoom, setActiveRoom] = useState({ type: null, id: null, data: null });
     const [messages, setMessages] = useState([]);
     const [onlineMembers, setOnlineMembers] = useState([]);
 
-    //STATI INPUT & UI
+    // STATI INPUT & UI
     const [newMessage, setNewMessage] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
 
-    //STATI MODALI
+    // STATI MODALI
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newTeamName, setNewTeamName] = useState("");
     const [showInviteModal, setShowInviteModal] = useState(false);
@@ -85,7 +85,7 @@ function ChatPage({ user }) {
         return () => clearInterval(interval);
     }, [refreshAllData]);
 
-    //WEBSOCKET & INITIAL LOAD
+    // WEBSOCKET & INITIAL LOAD
     useEffect(() => {
         if (!activeRoom.id) return;
 
@@ -155,15 +155,10 @@ function ChatPage({ user }) {
                                 // Le notifiche vengono gestite dal backend
                             }
                         }
-                    } else if (data.type === "online" || data.type === "offline") {
-                        if (activeRoom.type === 'team') {
-                            API.getOnlineMembers(activeRoom.id)
-                                .then(list => {
-                                    const usernames = Array.isArray(list) ? list.map(m => m.username) : [];
-                                    setOnlineMembers(Array.from(new Set(usernames)));
-                                })
-                                .catch(() => {});
-                        }
+                    } else if (data.type === "online") {
+                        setOnlineMembers(prev => prev.includes(data.username) ? [...prev] : [...prev, data.username]);
+                    } else if (data.type === "offline") {
+                        setOnlineMembers(prev => prev.filter(u => u !== data.username)); 
                     } else {
                         setMessages(prev => [...prev, data]);
                     }
@@ -245,6 +240,7 @@ function ChatPage({ user }) {
         setErrorMsg("");
         setNewMessage("");
         setMessages([]);
+        setOnlineMembers([]);
 
         try {
             let fetchedMessages = [];
@@ -400,7 +396,7 @@ function ChatPage({ user }) {
                     <Col className="d-flex flex-column align-items-center justify-content-center" style={{ backgroundColor: chatBg, color: theme === 'dark' ? '#f8f9fa' : '#6c757d' }}>
                         <div className="display-1 opacity-25 mb-3">🦀</div>
                         <h5>Ciao, {user.username}</h5>
-                        <p>Seleziona una chat per iniziare</p>
+                        <p>Seleziona una chat per iniziare oppure creane una nuova</p>
                     </Col>
                 )}
             </Row>

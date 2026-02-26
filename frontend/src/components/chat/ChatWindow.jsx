@@ -7,8 +7,8 @@ import Picker from "emoji-picker-react";
 import ThemeContext from '../../contexts/ThemeContext';
 
 function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMessage, setNewMessage, onlineMembers, 
-    onSend, onLeave, onShowMembers, onShowInvite, onShowRename }) 
-    {
+    onSend, onLeave, onShowMembers, onShowInvite, onShowRename }) {
+
     const theme = useContext(ThemeContext);
     const messagesEndRef = useRef(null);
 
@@ -22,6 +22,8 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
     const displayName = isTeam 
         ? (activeRoom.data?.name || "Gruppo")
         : (activeRoom.data?.other_username || `Utente ${activeRoom.id}`);
+
+    const isOtherOnline = isTeam ? onlineMembers.length > 0 : onlineMembers.includes(activeRoom.data?.other_username);  // for online-offline
 
     // Auto-scroll
     useEffect(() => {
@@ -45,14 +47,16 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
                         style={{ width: '40px', height: '40px', backgroundColor: getColorFromUsername(displayName, theme) }}>
                         {displayName.charAt(0).toUpperCase()}
                     </div>
-                    {/* 1.2 Members online */}
+                    {/* 1.2 Members online (one member always online. The one that is logged. Remember for private chat) */}
                     <div className="d-flex flex-column">
                         <div className="fw-bold">{displayName}</div>
                         <div className="d-flex align-items-center" style={{ fontSize: '0.8rem', color: '#6c757d' }}>
-                            <span className="rounded-circle me-1" style={{ width: '8px', height: '8px', backgroundColor: onlineMembers.length > 0 ? '#28a745' : '#6c757d' }}></span>
-                            <span className={onlineMembers.length > 0 ? "text-success" : "text-muted"}>
+                            <span className="rounded-circle me-1" style={{ width: '8px', height: '8px', 
+                                backgroundColor: isOtherOnline ? '#28a745' : '#6c757d' }}>
+                            </span>
+                            <span className={isOtherOnline ? 'text-success' : 'text-muted'}>
                                 {isTeam ? (`${onlineMembers.length} ${onlineMembers.length === 1 ? 'membro online' : 'membri online'}`) : 
-                                    (onlineMembers.includes(activeRoom.data?.other_username) ? 'online' : 'offline') }
+                                    isOtherOnline ? 'online' : 'offline' }
                             </span>
                         </div>
                     </div>

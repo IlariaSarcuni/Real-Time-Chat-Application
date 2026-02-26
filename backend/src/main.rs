@@ -91,6 +91,7 @@ async fn main() {
         // WebSocket
         .route("/ws/team/{id}", get(websocket_handler).route_layer(from_fn(auth_middleware)))
         .route("/ws/private/{id}", get(websocket_handler).route_layer(from_fn(auth_middleware)))
+        .route("/ws/global", get(ws::global_presence_handler))
 
         // Layers
         .layer(AuthSessionLayer::<User, i64, SessionSqlitePool, SqlitePool>::new(Some(pool.clone())).with_config(auth_config))
