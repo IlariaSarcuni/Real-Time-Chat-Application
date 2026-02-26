@@ -66,17 +66,10 @@ pub async fn get_online_members(
         }
     };
 
-    // 3. Filter by global presence (heartbeat)
-    use std::time::{Duration, Instant};
-    const ONLINE_THRESHOLD: Duration = Duration::from_secs(60);
-    let now = Instant::now();
-
+    // 3. Filter by global presence
     let online_members: Vec<MemberResponse> = members
         .into_iter()
-        .filter(|(id, _)| match state.presence_map.get(id) {
-            Some(ts) => now.duration_since(*ts.value()) <= ONLINE_THRESHOLD,
-            None => false,
-        })
+        .filter(|(id, _)| state.presence_map.contains_key(id))
         .map(|(_, username)| MemberResponse { username })
         .collect();
 
