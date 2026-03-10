@@ -175,6 +175,16 @@ const createPrivateChat = async (username) => {
     });
     return await handleResponse(response);
 };
+const deletePrivateChat = async (chat_id)=>
+{
+    const response = await fetch(`${SERVER_URL}/delete/private/${chat_id}`,
+        {
+            method: `POST`,
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+        });
+        return await handleResponse(response);
+}
 
 const getChats = async () => {
     const response = await fetch(`${SERVER_URL}/list/private`, { method: 'GET', credentials: 'include' });
@@ -272,7 +282,7 @@ const API = {
     getTeams, getOnlineMembers, getTeamMessages, sendTeamMessage, createTeam, renameTeam, leaveTeam,
     inviteUser, getInvites, acceptInvite, declineInvite,
     getUnreadCounts, getTeamMembers, markAsRead,
-    getChats, getChatMessages, sendPrivateMessage, createPrivateChat, getPrivateUnreadCounts, markPrivateAsRead,
+    getChats, getChatMessages, sendPrivateMessage, createPrivateChat,deletePrivateChat, getPrivateUnreadCounts, markPrivateAsRead,
     getPrivateOnline,
     heartbeatPresence, isUserOnline
 };

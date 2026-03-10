@@ -7,7 +7,7 @@ import Picker from "emoji-picker-react";
 import ThemeContext from '../../contexts/ThemeContext';
 
 function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMessage, setNewMessage, onlineMembers, 
-    onSend, onLeave, onShowMembers, onShowInvite, onShowRename }) {
+    onSend, onLeave, onShowMembers, onShowInvite, onShowRename,onDeleteChat }) {
 
     const theme = useContext(ThemeContext);
     const messagesEndRef = useRef(null);
@@ -90,6 +90,15 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
                         </Dropdown>
                     </div>  
                 )}  
+                {!isTeam && (
+                    <div className='ms-auto d-flex gap-2'>
+                    {/*Delete Chat*/}
+                        <Button variant="light" onClick={onDeleteChat} title="Elimina Chat" style={{ width: '45px', height: '45px' }}
+                            className={`p-1 group-actions-header d-flex align-items-center justify-content-center ${theme === 'dark' ? 'text-light' : 'text-muted'} rounded`}>
+                            <i class="bi bi-trash3-fill"></i>
+                        </Button>
+                    </div>
+                )}
             </div>
 
             {/* MESSAGGES */}

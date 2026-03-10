@@ -5,7 +5,7 @@ import ThemeContext from '../../contexts/ThemeContext';
 import "../../stylesheets/ChatPage.css";
 
 import { ChatWindow } from './ChatWindow';
-import { CreateChatModal, CreateTeamModal, InviteModal, MembersModal, RenameModal } from './ChatModals';
+import { CreateChatModal, CreateTeamModal, InviteModal, MembersModal, RenameModal,DeleteModal } from './ChatModals';
 
 function ChatPage({ user }) {
     const theme = useContext(ThemeContext);
@@ -33,6 +33,7 @@ function ChatPage({ user }) {
     const [showMembersModal, setShowMembersModal] = useState(false);
     const [members, setMembers] = useState([]);
     const [showRenameModal, setShowRenameModal] = useState(false);
+    const [showDeleteModal,setShowDeleteModal] = useState(false);
     const [renameValue, setRenameValue] = useState("");
     const [showCreatePrivateModal, setShowCreatePrivateModal] = useState(false);
     const [newChatName, setNewChatName] = useState("");
@@ -314,6 +315,17 @@ function ChatPage({ user }) {
             alert(err.message);
         }
     };
+    const handleDelete = async()=>
+    {
+        try{
+            await API.deletePrivateChat(activeRoom.id);
+            activeRoom.id=0;
+            setShowDeleteModal(false);
+        }
+        catch(err){
+            alert(err.message);
+        }
+    }
 
     const handleAccept = (id) => {
         API.acceptInvite(id)
@@ -391,6 +403,7 @@ function ChatPage({ user }) {
                         onLeave={handleLeave} onShowMembers={handleShowMembers}
                         onShowInvite={handleOpenInvite}
                         onShowRename={() => { setRenameValue(activeRoom.data.name); setShowRenameModal(true); }}
+                        onDeleteChat={()=>{setShowDeleteModal(true);}}
                     />
                 ) : (
                     <Col className="d-flex flex-column align-items-center justify-content-center" style={{ backgroundColor: chatBg, color: theme === 'dark' ? '#f8f9fa' : '#6c757d' }}>
@@ -407,6 +420,7 @@ function ChatPage({ user }) {
             <InviteModal show={showInviteModal} onHide={handleCloseInvite} value={inviteUsername} onChange={setInviteUsername} onSubmit={handleInvite} />
             <MembersModal show={showMembersModal} onHide={() => setShowMembersModal(false)} members={members} onlineMembers={onlineMembers} user={user} />
             <RenameModal show={showRenameModal} onHide={() => setShowRenameModal(false)} value={renameValue} onChange={setRenameValue} onSubmit={handleRename} />
+            <DeleteModal show={showDeleteModal} onHide={()=>setShowDeleteModal(false)} onSubmit={handleDelete}/>
         </Container>
     );
 }

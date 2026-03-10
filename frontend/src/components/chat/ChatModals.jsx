@@ -43,6 +43,17 @@ export function InviteModal({ show, onHide, value, onChange, onSubmit }) {
     );
 }
 
+export function DeleteModal({ show, onHide, onSubmit }) {
+    return (
+        <Modal show={show} onHide={onHide} centered>
+            <Modal.Header closeButton><Modal.Title>Sei sicuro di voler eliminare la chat? (l'eliminazione è bidirezionale e permanente)</Modal.Title></Modal.Header>
+            <Modal.Footer>
+                <Button variant="danger" onClick={onSubmit} >Elimina</Button>
+            </Modal.Footer>
+        </Modal>
+    );
+}
+
 export function RenameModal({ show, onHide, value, onChange, onSubmit }) {
     return (
         <Modal show={show} onHide={onHide} centered>

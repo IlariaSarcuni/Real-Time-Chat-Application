@@ -55,6 +55,29 @@ pub async fn create_chat(Extension(user): Extension<User>, State(state): State<A
      Ok(Json(json!({ "id": result.last_insert_rowid(), "success": true, "message": "Chat creata." })))
 }
 
+// --- DELETE CHAT ---
+pub async fn delete_chat(Extension(user): Extension<User>, State(state): State<AppState>, Path(chat_id): Path<i64>) -> Result<impl IntoResponse, AppError> 
+{
+    //TODO: rollback
+    let is_participant = sqlx::query_scalar::<_, i64>(
+            "SELECT id FROM private_chats_assoc WHERE id = ?1 AND (id_user1 = ?2 OR id_user2 = ?2)"
+        ).bind(chat_id).bind(user.id).fetch_optional(&state.pool).await?;
+
+        if is_participant.is_none() {
+            return Err(AppError::Forbidden);
+        }
+
+    //Delete Chat
+    let mut result=sqlx::query("DELETE FROM private_chats_assoc WHERE id=?1")
+    .bind(chat_id).execute(&state.pool).await?;
+
+    result=sqlx::query("DELETE FROM private_messages WHERE id_chat=?1")
+    .bind(chat_id).execute(&state.pool).await?;
+    //
+     Ok(Json(json!({ "id": result.last_insert_rowid(), "success": true, "message": "Chat rimossa." })))
+
+}
+
 // --- CHAT MESSAGES ---
 pub async fn get_chat_messages(Extension(user): Extension<User>, State(state): State<AppState>, Path(chat_id): Path<i64>)-> Result<impl IntoResponse, AppError>
 {
