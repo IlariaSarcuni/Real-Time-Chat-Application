@@ -65,7 +65,7 @@ Backend (Eseguibile Rust): 2.21 MB (2.321.408 byte) (ottimizzato con LTO e strip
 Frontend (Asset statici): 2.00 MB (2.102.776 byte) (codice JavaScript minificato e pronto per la distribuzione).
 
 ## Screenshots
-![Login Form](img/screen1.jpg)
-![Chat Screen](img/screen2.jpg)
+![Login Form](img/login.jpg)
+![Chat Screen](img/chat_team.jpg)
 ## Licenza
 This project is licensed under the MIT License.

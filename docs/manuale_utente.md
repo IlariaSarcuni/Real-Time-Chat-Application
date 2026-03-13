@@ -1,5 +1,5 @@
 # Ruggine Chat 🦀 – Manuale Utente
-**Sistema di Messaggistica Real-Time ad Alte Prestazioni**
+**Sistema di messaggistica Real-Time ad alte prestazioni**
 
 **Corso:** Programmazione di Sistema (02GRSYG)  
 **Anno Accademico:** 2024/2025  
@@ -7,7 +7,7 @@
 
 ---
 
-### 👥 Gruppo di Sviluppo (G9)
+### Gruppo di Sviluppo (G9)
 * [Agnese Re](https://github.com/AgneseRe) – Matricola: s325676
 * [Ilaria Sarcuni](https://github.com/IlariaSarcuni) – Matricola: s332008
 * [Cosimo Sergi](https://github.com/Cosser99) – Matricola: s347914
@@ -58,8 +58,7 @@ Il nome "Ruggine" richiama il linguaggio di programmazione **Rust**, con cui è 
  
 ## 3. Installazione e avvio
  
-Questa sezione è destinata a chi deve avviare l'applicazione in locale. Se si accede a una versione già distribuita, passare direttamente alla sezione [Accesso all'applicazione](#4-accesso-allapplicazione).
- 
+Questa sezione è destinata a chi deve avviare l'applicazione in locale.
 ### 3.1 Download del progetto
  
 Clonare il repository dal controllo di versione oppure estrarre l'archivio `.zip` fornito. Il progetto è organizzato in due cartelle principali:
@@ -94,7 +93,7 @@ npm install      # solo al primo avvio o dopo aggiornamenti
 npm run dev
 ```
  
-Il frontend sarà accessibile su **http://localhost:5173** e comunicherà automaticamente con il backend su porta 3000 dello stesso host.
+Il frontend sarà accessibile su **http://localhost:4000** e comunicherà automaticamente con il backend su porta 3000 dello stesso host.
  
 Per build di produzione (genera i file statici in `dist/`):
  
@@ -113,7 +112,9 @@ L'applicazione reindirizza automaticamente alla pagina di login.
 ---
  
 ## 5. Registrazione
- 
+
+![Registrazione](../img/registrazione.jpg)
+
 Per creare un nuovo account:
  
 1. Dalla pagina di login, fare clic sul pulsante **Registrati**.
@@ -130,6 +131,8 @@ Se la registrazione va a buon fine, viene mostrato un messaggio di conferma e l'
 ---
  
 ## 6. Login
+
+![Login](../img/login.jpg)
  
 Per accedere all'applicazione:
  
@@ -143,6 +146,8 @@ Se le credenziali sono corrette, si viene reindirizzati alla pagina principale d
 ---
  
 ## 7. Interfaccia principale
+
+![Interfaccia principale](../img/intefaccia_principale.jpg)
  
 Una volta effettuato il login, si accede alla pagina principale, composta da tre aree:
  
@@ -175,7 +180,9 @@ Occupa la parte principale dello schermo. Quando nessuna conversazione è selezi
 ---
  
 ## 8. Chat di gruppo (Team)
- 
+
+![Chat Gruppo](../img/chat_gruppo.jpg)
+
 ### 8.1 Entrare in un gruppo
  
 Per accedere a un gruppo già esistente di cui si è membri, fare clic sul suo nome nella sidebar. I messaggi vengono caricati e la finestra di chat si aggiorna automaticamente.
@@ -231,7 +238,9 @@ Nell'intestazione della finestra di chat di gruppo è indicato il numero di **me
 ---
  
 ## 9. Chat private
- 
+
+ ![Chat Privata](../img/chat_privata.jpg)
+
 ### 9.1 Avviare una nuova chat privata
  
 1. Fare clic sul pulsante **Nuova Chat** (icona `+`) nella sezione chat private della sidebar.
