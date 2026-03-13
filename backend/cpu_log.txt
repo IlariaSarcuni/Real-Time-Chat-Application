@@ -30,11 +30,9 @@
 [22-01-2026 11:08:21] CPU Usage: 0.51% | Total Run Time: 481s
 [25-01-2026 17:56:37] CPU Usage: 1.39% | Total Run Time: 120s
 [11-02-2026 13:51:11] CPU Usage: 1.27% | Total Run Time: 134s
-[11-02-2026 13:53:11] CPU Usage: 2.95% | Total Run Time: 254s
 [11-02-2026 13:55:11] CPU Usage: 1.26% | Total Run Time: 374s
 [11-02-2026 13:57:11] CPU Usage: 0.90% | Total Run Time: 494s
 [11-02-2026 13:59:11] CPU Usage: 2.17% | Total Run Time: 614s
-[11-02-2026 14:01:11] CPU Usage: 2.66% | Total Run Time: 734s
 [11-02-2026 14:03:11] CPU Usage: 0.23% | Total Run Time: 854s
 [11-02-2026 14:05:11] CPU Usage: 1.34% | Total Run Time: 974s
 [11-02-2026 14:07:11] CPU Usage: 0.34% | Total Run Time: 1094s
@@ -53,7 +51,6 @@
 [11-02-2026 14:33:12] CPU Usage: 0.47% | Total Run Time: 2655s
 [11-02-2026 14:35:12] CPU Usage: 0.81% | Total Run Time: 2775s
 [11-02-2026 14:37:12] CPU Usage: 0.64% | Total Run Time: 2895s
-[11-02-2026 14:39:47] CPU Usage: 3.31% | Total Run Time: 121s
 [11-02-2026 14:41:47] CPU Usage: 0.33% | Total Run Time: 241s
 [11-02-2026 14:43:47] CPU Usage: 0.13% | Total Run Time: 361s
 [11-02-2026 14:45:47] CPU Usage: 0.48% | Total Run Time: 481s
@@ -130,7 +127,6 @@
 [26-02-2026 10:37:01] CPU Usage: 0.55% | Total Run Time: 3611s
 [26-02-2026 10:39:01] CPU Usage: 0.39% | Total Run Time: 3731s
 [26-02-2026 10:41:01] CPU Usage: 0.82% | Total Run Time: 3851s
-[26-02-2026 10:43:01] CPU Usage: 3.81% | Total Run Time: 3971s
 [26-02-2026 10:45:01] CPU Usage: 1.21% | Total Run Time: 4091s
 [26-02-2026 10:47:01] CPU Usage: 1.55% | Total Run Time: 4211s
 [26-02-2026 10:49:01] CPU Usage: 1.35% | Total Run Time: 4331s

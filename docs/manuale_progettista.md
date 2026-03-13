@@ -1,5 +1,5 @@
 # Ruggine 🦀 – Manuale del Progettista
-**Sistema di Messaggistica Real-Time ad Alte Prestazioni**
+**Sistema di messaggistica Real-Time ad alte prestazioni**
 
 **Corso:** Programmazione di Sistema (02GRSYG)  
 **Anno Accademico:** 2024/2025  
@@ -7,7 +7,7 @@
 
 ---
 
-### 👥 Gruppo di Sviluppo (G9)
+### Gruppo di Sviluppo (G9)
 * [Agnese Re](https://github.com/AgneseRe) – Matricola: s325676
 * [Ilaria Sarcuni](https://github.com/IlariaSarcuni) – Matricola: s332008
 * [Cosimo Sergi](https://github.com/Cosser99) – Matricola: s347914
