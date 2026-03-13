@@ -567,7 +567,11 @@ Dall'analisi del file `cpu_log.txt` generato durante lo sviluppo e il testing de
 - **Utilizzo CPU in condizioni idle:** il processo backend consuma tipicamente tra **0.00% e 0.50%** di CPU in assenza di traffico o con pochi utenti connessi. Questo conferma l'efficienza del runtime asincrono Tokio, che non spreca cicli CPU in attesa passiva di eventi.
 - **Utilizzo medio sotto carico:** durante le sessioni di test con più utenti connessi e scambio attivo di messaggi, il consumo si attesta stabilmente tra **0.50% e 2.00%**.
 
-Il backend Rust risulta estremamente leggero anche sotto carico, confermando la validità della scelta di Rust come linguaggio per il server di questa applicazione.
+Il backend Rust risulta estremamente leggero, confermando la validità della scelta di Rust come linguaggio per il server di questa applicazione.
+Ciò è dovuto principalmente di tre scelte architetturali:
+- **Rust**: nessun garbage collector, zero overhead runtime, memoria gestita a compile time.
+- **Tokio asincrono**: un thread può gestire migliaia di connessioni WebSocket concorrenti senza bloccarsi.
+- **DashMap**: struttura dati concorrente senza lock globali per lo stato condiviso.
 
 ---
 
