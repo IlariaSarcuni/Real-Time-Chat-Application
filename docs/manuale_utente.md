@@ -101,14 +101,14 @@ Per build di produzione (genera i file statici in `dist/`):
 ```bash
 npm run build
 ```
- 
+
 ---
  
 ## 4. Accesso all'applicazione
  
-Aprire il browser e navigare all'indirizzo fornito dall'amministratore del sistema (ad esempio `http://192.168.1.10:5173` in ambiente di sviluppo locale, oppure l'indirizzo pubblico in produzione).
+Aprire il browser e navigare all'indirizzo fornito.
  
-Se non si è già autenticati, l'applicazione reindirizza automaticamente alla pagina di login.
+L'applicazione reindirizza automaticamente alla pagina di login.
  
 ---
  
@@ -136,7 +136,7 @@ Per accedere all'applicazione:
 1. Nella pagina di login, inserire il proprio **Username** e la propria **Password**.
 2. Fare clic su **Accedi**.
  
-Se le credenziali sono corrette, si viene reindirizzati alla pagina principale della chat (`/chat`). In caso di credenziali errate, viene mostrato un messaggio di errore.
+Se le credenziali sono corrette, si viene reindirizzati alla pagina principale della chat. In caso di credenziali errate, viene mostrato un messaggio di errore.
  
 > **Nota:** Se si è già autenticati, l'applicazione reindirizza automaticamente alla chat senza mostrare la pagina di login.
  
@@ -144,13 +144,13 @@ Se le credenziali sono corrette, si viene reindirizzati alla pagina principale d
  
 ## 7. Interfaccia principale
  
-Una volta effettuato il login, si accede alla pagina principale (`/chat`), composta da tre aree:
+Una volta effettuato il login, si accede alla pagina principale, composta da tre aree:
  
 ### 7.1 Barra di navigazione (in alto)
  
 La barra superiore è sempre visibile e contiene:
 - **Logo e nome** dell'applicazione (🦀 Ruggine Chat), cliccabile per tornare alla home.
-- **Nome utente** dell'utente autenticato (visibile su schermi medio-grandi).
+- **Nome utente** dell'utente autenticato.
 - **Pulsante tema** (☀️ / 🌙): alterna tra la modalità chiara e quella scura. La preferenza viene salvata e mantenuta tra le sessioni.
 - **Pulsante Logout**: termina la sessione.
  
@@ -161,7 +161,7 @@ Contiene l'elenco delle conversazioni attive, divise in due sezioni:
 - **Gruppi**: lista di tutti i team di cui si è membri.
 - **Chat private**: lista di tutte le conversazioni private avviate.
  
-Ogni voce nella lista mostra il nome del gruppo o dell'utente con cui si conversa. Un **badge numerico arancione** indica il numero di messaggi non letti in quella conversazione.
+Ogni voce nella lista mostra il nome del gruppo o dell'utente con cui si conversa. Un **badge numerico rosso** indica il numero di messaggi non letti in quella conversazione.
  
 Nella parte inferiore della sidebar sono presenti i pulsanti per:
 - Creare un nuovo gruppo.
@@ -183,7 +183,7 @@ Per accedere a un gruppo già esistente di cui si è membri, fare clic sul suo n
 ### 8.2 Creare un nuovo gruppo
  
 1. Fare clic sul pulsante **Nuovo Gruppo** (icona `+`) nella sidebar.
-2. Nella finestra modale che appare, inserire il nome del gruppo.
+2. Nella finestra che appare, inserire il nome del gruppo.
 3. Fare clic su **Crea gruppo**.
  
 Il nuovo gruppo apparirà immediatamente nella propria lista.
@@ -192,15 +192,15 @@ Il nuovo gruppo apparirà immediatamente nella propria lista.
  
 1. Selezionare il gruppo dalla sidebar.
 2. Digitare il messaggio nel campo di testo in basso.
-3. Premere **Invio** oppure fare clic sul pulsante di invio (icona ✉️).
+3. Premere **Invio** oppure fare clic sul pulsante di invio.
  
 I messaggi degli altri partecipanti appaiono sulla sinistra; i propri messaggi appaiono sulla destra. Ogni messaggio mostra il nome del mittente (nei gruppi) e l'orario di invio.
  
-È possibile inserire **emoji** nel messaggio facendo clic sull'icona 😊 a sinistra del campo testo, che apre un selettore emoji.
+È possibile inserire **emoji** nel messaggio facendo clic sull'icona '😊' a sinistra del campo testo, che apre un selettore emoji.
  
 ### 8.4 Visualizzare i membri del gruppo
  
-Fare clic sull'icona 👥 in alto a destra nella finestra di chat. Si apre una modale con la lista di tutti i membri, il loro indicatore di presenza (🟢 online / ⚫ offline) e un badge **Tu** in corrispondenza del proprio username.
+Fare clic sull'icona '👥' in alto a destra nella finestra di chat. Si apre una modale con la lista di tutti i membri, il loro indicatore di presenza (🟢 online / ⚫ offline) e un badge **Tu** in corrispondenza del proprio username.
  
 ### 8.5 Invitare un utente nel gruppo
  
@@ -273,7 +273,7 @@ Un **badge numerico** accanto al nome di un gruppo o di una chat privata indica 
  
 Fare clic sull'icona ☀️ o 🌙 nella barra di navigazione per alternare tra tema chiaro e tema scuro. La scelta viene salvata nel browser e mantenuta tra le sessioni successive.
  
-Il tema scuro usa sfondi scuri con testo chiaro, adatto a condizioni di scarsa luminosità. Il tema chiaro usa sfondi bianchi con accenti arancione bruciato.
+Il tema chiaro usa sfondi bianchi, al contrario, il tema scuro usa sfondi scuri con testo chiaro, adatto a condizioni di scarsa luminosità. 
  
 ---
  
@@ -290,8 +290,8 @@ Per uscire dall'applicazione, fare clic sul pulsante **Logout** nella barra di n
 | "Credenziali non valide" al login | Username o password errati | Verificare le credenziali inserite |
 | "Username già in uso" alla registrazione | Lo username scelto è già occupato | Scegliere un username diverso |
 | "Le password non coincidono" | I due campi password sono diversi | Reinserire la password con attenzione |
-| "Utente non trovato" all'invito | Lo username inserito non esiste | Verificare di aver scritto correttamente lo username |
-| "Non puoi creare una chat con te stesso" | Si è inserito il proprio username | Inserire lo username di un altro utente |
+| "Utente non trovato" all'invito | L' username inserito non esiste | Verificare di aver scritto correttamente l' username |
+| "Non puoi creare una chat con te stesso" | Si è inserito il proprio username | Inserire l' username di un altro utente |
 | La pagina non carica | Il server non è raggiungibile | Verificare la connessione e che il server sia attivo |
 | I messaggi non arrivano in tempo reale | Connessione WebSocket interrotta | Ricaricare la pagina |
 | Pagina 404 | URL non valido | Fare clic sul link "Ritorna all'homepage" |
