@@ -15,7 +15,7 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const onEmojiClick = (emojiSelector) => {
         setNewMessage(prevMsg => prevMsg + emojiSelector.emoji);
-        setShowEmojiPicker(false);  // close picker after selection
+        setShowEmojiPicker(false);  
     }
 
     const isTeam = activeRoom.type === 'team';
@@ -40,14 +40,11 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
 
             {/* HEADER */}
             <div className={`p-3 border-bottom d-flex justify-content-between align-items-center shadow-sm ${headerClass}`} style={{ height: '70px' }}>
-                {/* 1. Group icon and info */}
                 <div className="d-flex align-items-center me-auto">
-                    {/* 1.1 Icon */}
                     <div className="text-white rounded-circle d-flex justify-content-center align-items-center me-3"
                         style={{ width: '40px', height: '40px', backgroundColor: getColorFromUsername(displayName, theme) }}>
                         {displayName.charAt(0).toUpperCase()}
                     </div>
-                    {/* 1.2 Members online (one member always online. The one that is logged. Remember for private chat) */}
                     <div className="d-flex flex-column">
                         <div className="fw-bold">{displayName}</div>
                         <div className="d-flex align-items-center" style={{ fontSize: '0.8rem', color: '#6c757d' }}>
@@ -61,15 +58,12 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
                         </div>
                     </div>
                 </div>
-                {/* 2. Team buttons */}
                 {isTeam && (
                     <div className="ms-auto d-flex gap-2">
-                        {/* 2.1 Show Members */}
                         <Button variant="light" onClick={onShowMembers} title="Vedi Membri" style={{ width: '45px', height: '45px' }}
                             className={`p-1 group-actions-header d-flex align-items-center justify-content-center ${theme === 'dark' ? 'text-light' : 'text-muted'} rounded`}>
                             <i className="bi bi-people-fill"></i>
                         </Button>
-                        {/* 2.2 Invite, Rename and Leave */}
                         <Dropdown align="end">
                             <Dropdown.Toggle variant="light" id="group-actions-dropdown" style={{ width: '45px', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             className={`p-1 group-actions-header ${theme === 'dark' ? 'text-light' : 'text-muted'} rounded`}>

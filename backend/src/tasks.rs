@@ -13,7 +13,7 @@ pub async fn cpu_logger_task() {
     println!("{}", "Avvio del logger CPU Backend (ogni 2 minuti)...".yellow());
     
     loop {
-        // Aspettiamo 120 secondi
+        // Aspetta 120 secondi
         sleep(Duration::from_secs(120)).await;
 
         sys.refresh_all(); 

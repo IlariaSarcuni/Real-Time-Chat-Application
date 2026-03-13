@@ -1,43 +1,30 @@
-// URL Dinamico per supportare Android/Cross-Platform
 const getBaseUrl = () => {
-    // Ottiene protocollo e hostname (es. "http://192.168.1.10")
     const { hostname, protocol } = window.location;
-    // Se la porta è 5173 (Vite), assumiamo che il server sia su 3000
-    // Se la porta è già 3000 (Produzione statica), usiamo lo stesso host
     return `${protocol}//${hostname}:3000`;
 };
 
 const SERVER_URL = getBaseUrl();
 
-// --- FUNZIONE DI GESTIONE RISPOSTA (CORRETTA) ---
 async function handleResponse(response) {
     if (!response.ok) {
         try {
             const errPayload = await response.text();
             try {
-                // Proviamo a parsare il JSON di errore del backend
                 const errJson = JSON.parse(errPayload);
 
-                // 1. PRIORITÀ: Se c'è un campo 'message', usiamo quello (es. "Credenziali non valide")
                 if (errJson.message) throw new Error(errJson.message);
 
-                // 2. Se non c'è message, guardiamo 'error', ma SOLO se è una stringa descrittiva.
-                //    (Ignoriamo { error: true } che causava il bug precedente)
                 if (errJson.error && typeof errJson.error === 'string') throw new Error(errJson.error);
 
             } catch (jsonError) {
-                // Se l'errore è stato lanciato da noi sopra (quindi ha un messaggio pulito), lo rilanciamo
                 if (jsonError.message && jsonError.message !== "Unexpected token" && !jsonError.message.includes("JSON")) {
                     throw jsonError;
                 }
-                // Se il parsing fallisce o non ci sono campi utili, usiamo il testo grezzo se esiste
                 if (errPayload) throw new Error(errPayload);
             }
         } catch (e) {
-            // Rilancia l'errore pulito al frontend
             if (e.message) throw e;
         }
-        // Fallback finale se non riusciamo a leggere nulla dal corpo della risposta
         throw new Error(response.statusText || "Errore di connessione al server");
     }
     
@@ -48,7 +35,7 @@ async function handleResponse(response) {
     return true; 
 }
 
-// --- AUTH & USER ---
+// AUTH & USER
 const register = async (credentials) => {
     const response = await fetch(`${SERVER_URL}/register`, {
         method: 'POST',
@@ -85,7 +72,7 @@ const getUserInfo = async () => {
     return await handleResponse(response);
 }
 
-// --- GRUPPI E MESSAGGI ---
+// GRUPPI E MESSAGGI
 const getTeams = async () => {
     const response = await fetch(`${SERVER_URL}/list/teams`, { method: 'GET', credentials: 'include' });
     return await handleResponse(response);
@@ -165,7 +152,7 @@ const leaveTeam = async (teamId) => {
     return await handleResponse(response);
 };
 
-// --- CHAT ---
+// CHAT
 const createPrivateChat = async (username) => {
     const response = await fetch(`${SERVER_URL}/create/private`, {
         method: 'POST',
@@ -219,7 +206,7 @@ const sendPrivateMessage = async (id, msg, from, to) => {
     return await handleResponse(response);
 };
 
-// --- INVITI ---
+// INVITI
 const inviteUser = async (username, teamId) => {
     const response = await fetch(`${SERVER_URL}/invite`, {
         method: 'POST',
@@ -256,7 +243,7 @@ const declineInvite = async (teamId) => {
     return await handleResponse(response);
 };
 
-// --- PRESENCE (GLOBAL) ---
+// PRESENCE
 const heartbeatPresence = async () => {
     const response = await fetch(`${SERVER_URL}/presence/heartbeat`, { method: 'POST', credentials: 'include' });
     return await handleResponse(response);

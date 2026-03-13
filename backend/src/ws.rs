@@ -1,11 +1,3 @@
-/* ========================================================================
- * WEBSOCKET SERVER - REAL TIME MESSAGING AND PRESENCE CONTROL
- * ========================================================================
- * This module handles persistent connessions for team and private chats, 
- * presence monitoring, and access control. Verify user permissions before 
- * upgrading HTTP requests to WebSocket connections.
- */
-
 use axum::{
     extract::{ws::{Message, WebSocket, WebSocketUpgrade}, Path, State},
     response::IntoResponse,
@@ -19,7 +11,7 @@ use crate::{models::User, state::AppState};
 
 pub async fn websocket_handler(ws: WebSocketUpgrade, Extension(user): Extension<User>, State(state): State<AppState>, uri: Uri, Path(id): Path<i64>) -> impl IntoResponse {
 
-    let path = uri.path();  // /ws/team/{id} or /ws/private/{id}
+    let path = uri.path();  
 
     if path.contains("/ws/team") {
         let is_member = sqlx::query_scalar::<_, i64>("SELECT id_user FROM user_team WHERE id_user = ?1 AND id_team = ?2")
@@ -46,7 +38,6 @@ pub async fn websocket_handler(ws: WebSocketUpgrade, Extension(user): Extension<
 
 async fn handle_socket(socket: WebSocket, state: AppState, room_id: i64) {
 
-    // tx and rx for internal broadcast. sender and receiver for managing the direct ws link to the user.
     let tx = state.chat_rooms
         .entry(room_id)
         .or_insert_with(|| broadcast::channel(100).0)
@@ -54,7 +45,6 @@ async fn handle_socket(socket: WebSocket, state: AppState, room_id: i64) {
     let mut rx = tx.subscribe();
     let (mut sender, mut receiver) = socket.split();
 
-    // Monitor incoming messages and detect when the user disconnets
     let mut send_task = tokio::spawn(async move {
         while let Ok(msg) = rx.recv().await {
             if sender.send(Message::Text(msg.into())).await.is_err() {

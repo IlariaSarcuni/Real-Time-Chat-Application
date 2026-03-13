@@ -25,7 +25,7 @@ function LoginForm() {
     const handleSubmit = async (event) => {
         event.preventDefault();
         setErrorMessage('');
-        setLoading(true);   // Accesso in corso...
+        setLoading(true);   
 
         try {
             const credentials = { username, password }

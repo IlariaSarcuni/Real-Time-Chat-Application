@@ -56,7 +56,7 @@ function ChatPage({ user }) {
             const chatsData = Array.isArray(c) ? c : [];
             const invitesData = Array.isArray(inv) ? inv : [];
             
-            //Notifiche di team e chat private (con prefisso per evitare collisioni)
+            //Notifiche di team e chat private 
             const teamNotifs = Object.entries(unreadTeams || {}).reduce((acc, [id, count]) => {
                 acc[`team_${id}`] = count;
                 return acc;
@@ -92,7 +92,7 @@ function ChatPage({ user }) {
         let isMounted = true;
         let socket = null;
 
-        // 1. Caricamento iniziale messaggi
+        // Caricamento iniziale messaggi
         const fetchInitialData = async () => {
             try {
                 let msgs = [];
@@ -119,7 +119,7 @@ function ChatPage({ user }) {
 
         fetchInitialData();
 
-        // 2. Configurazione WebSocket con riconnessione
+        // Configurazione WebSocket con riconnessione
         const connectWS = () => {
             const { hostname, protocol } = window.location;
             const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
@@ -139,13 +139,10 @@ function ChatPage({ user }) {
                     if (data.type === "chat") {
                         // Solo messaggi da altri utenti
                         if (data.username === user.username) {
-                            // Se è un messaggio dell'utente stesso nella stanza attiva, aggiungilo
                             if (incomingId === activeRoom.id) {
                                 setMessages(prev => [...prev, data]);
                             }
-                            // Non fare nulla per messaggi propri in altre stanze
                         } else {
-                            // Messaggi di altri utenti
                             if (incomingId === activeRoom.id) {
                                 setMessages(prev => [...prev, data]);
                                 // Azzera notifica se sei già nella chat attiva
@@ -193,7 +190,6 @@ function ChatPage({ user }) {
             }
             setNewMessage("");
             
-            // Reset notifica quando invii un messaggio
             const notifKey = activeRoom.type === 'team' ? `team_${activeRoom.id}` : `chat_${activeRoom.id}`;
             setNotifications(prev => ({ ...prev, [notifKey]: 0 }));
             if (activeRoom.type === 'team') {
@@ -319,8 +315,8 @@ function ChatPage({ user }) {
         API.acceptInvite(id)
             .then(async () => {
                 await refreshAllData();
-                setNotifications(prev => ({ ...prev, [`team_${id}`]: 0 })); // Pulisci notifiche dopo refresh (gli inviti sono per team)
-                await API.markAsRead(id).catch(err => console.error("Errore markAsRead:", err)); // Marca come letto nel backend
+                setNotifications(prev => ({ ...prev, [`team_${id}`]: 0 })); 
+                await API.markAsRead(id).catch(err => console.error("Errore markAsRead:", err)); 
             })
             .catch(e => console.error(e));
     };

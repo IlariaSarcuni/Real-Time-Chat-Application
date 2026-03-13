@@ -1,7 +1,6 @@
 use axum::{http::StatusCode, response::{IntoResponse, Response}, Json};
 use serde_json::json;
 
-// Enum che racchiude tutti gli errori possibili
 pub enum AppError {
     Sqlx(sqlx::Error),
     Anyhow(anyhow::Error),
@@ -12,14 +11,12 @@ pub enum AppError {
     BadRequest(String),
 }
 
-// Conversione automatica da SQLX Error a AppError
 impl From<sqlx::Error> for AppError {
     fn from(inner: sqlx::Error) -> Self {
         AppError::Sqlx(inner)
     }
 }
 
-// Conversione automatica da Anyhow Error a AppError
 impl From<anyhow::Error> for AppError {
     fn from(inner: anyhow::Error) -> Self {
         AppError::Anyhow(inner)

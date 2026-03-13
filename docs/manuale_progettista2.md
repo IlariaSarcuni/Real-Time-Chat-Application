@@ -434,7 +434,7 @@ La funzione `handleResponse` gestisce in modo uniforme le risposte di errore del
 ## 10. Componenti React
 
 ### `NavHeader`
-Barra di navigazione superiore fissa. Mostra il logo dell'applicazione (🦀 Ruggine Chat), il nome dell'utente autenticato, il pulsante per alternare tema chiaro/scuro e il pulsante di logout. Usa `ThemeContext` per scegliere l'icona del tema (`bi-sun` o `bi-moon-stars`). Il colore di sfondo è fisso (`#B7410E`, arancione bruciato) indipendentemente dal tema attivo.
+Barra di navigazione superiore fissa. Mostra il logo dell'applicazione (🦀 Ruggine Chat), il nome dell'utente autenticato, il pulsante per alternare tema chiaro/scuro e il pulsante di logout. Usa `ThemeContext` per scegliere l'icona del tema (`bi-sun` o `bi-moon-stars`). 
 
 ### `LoginForm` e `RegisterForm`
 Componenti di autenticazione con gestione dello stato locale (username, password, loading, errori). `RegisterForm` esegue validazione client-side: lunghezza username minima di 3 caratteri, password minima di 8 caratteri, corrispondenza tra i due campi password. Entrambi i componenti adattano gli stili al tema attivo tramite `ThemeContext` e includono un pulsante per mostrare/nascondere la password inserita.

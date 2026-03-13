@@ -5,21 +5,12 @@ import { useEffect, useState } from "react";
 import { Container } from "react-bootstrap";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
-// --- CAMBIAMENTO 1: Contexts ---
 import ThemeContext from './contexts/ThemeContext'; 
-
-// API è rimasto nella root, quindi questo va bene
 import API from './API';
-
-// --- CAMBIAMENTO 2: Componenti Common ---
 import NavHeader from "./components/common/NavHeader";
 import NotFoundComponent from './components/common/NotFoundComponent';
-
-// --- CAMBIAMENTO 3: Componenti Auth ---
 import { LoginForm } from './components/auth/AuthComponents';
 import RegisterForm from './components/auth/RegisterForm'; 
-
-// --- CAMBIAMENTO 4: Componenti Chat ---
 import ChatPage from './components/chat/ChatPage'; 
 
 function App() {
@@ -86,6 +77,8 @@ function App() {
     if (socket) socket.close();
   };
 }, [loggedIn]);
+
+if (loadingInfo) return null;
 
   return (
     <ThemeContext.Provider value={theme}>

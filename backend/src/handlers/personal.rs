@@ -28,17 +28,16 @@ pub async fn get_chat_list(Extension(user): Extension<User>, State(state): State
 // --- NEW PRIVATE CHAT ---
 pub async fn create_chat(Extension(user): Extension<User>, State(state): State<AppState>, Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
     
-    // 1. Check if existed username
     let target_username = body.get("username").and_then(|v| v.as_str()).ok_or(AppError::BadRequest("Username non trovato".into()))?;
-    // 2. If it exists, search id target user
+    
     let target_user: UserSql = sqlx::query_as("SELECT id, username, password FROM user WHERE username = ?1")
         .bind(target_username).fetch_optional(&state.pool)
         .await?.ok_or(AppError::UserNotFound)?;
-    // 3. Create chat with yourself
+    
     if target_user.id as i64 == user.id {
         return Err(AppError::BadRequest("Non puoi creare una chat con te stesso".into()));
     }
-    // 4. Verify if already exists a chat between these two users
+    
     let existing_chat = sqlx::query_scalar::<_, i64>(
         "SELECT id FROM private_chats_assoc WHERE (id_user1 = ?1 AND id_user2 = ?2) OR (id_user1 = ?2 AND id_user2 = ?1)")
         .bind(user.id)
@@ -48,7 +47,7 @@ pub async fn create_chat(Extension(user): Extension<User>, State(state): State<A
     if let Some(id) = existing_chat {
         return Ok(Json(json!({ "id": id, "message": "Chat esistente" })));
     }
-    // 5. Create new chat
+    
     let result = sqlx::query("INSERT INTO private_chats_assoc (id_user1, id_user2) VALUES(?1, ?2)")
     .bind(user.id).bind(target_user.id).execute(&state.pool).await?;
 
@@ -66,7 +65,6 @@ pub async fn get_chat_messages(Extension(user): Extension<User>, State(state): S
         return Err(AppError::Forbidden);
     }
 
-    // INFO: name1 and name2 are respectively from and to
     let rows: Vec<PrivateMessage> = sqlx::query_as("SELECT id_chat, message, data, ora, name1, name2, type FROM private_messages WHERE id_chat = ?1")
     .bind(chat_id).fetch_all(&state.pool).await?;
 
@@ -99,7 +97,7 @@ pub async fn send_chat_message(Extension(user): Extension<User>, State(state): S
     .await?
     .ok_or(AppError::Forbidden)?;
 
-    // NOTE: understand who is the sender and who is the receiver
+    // Understand who is the sender and who is the receiver
     let sender_name = &user.username;   
     let receiver_name = if sender_name == &name1 { &name2 } else { &name1 }; 
 
@@ -122,7 +120,7 @@ pub async fn send_chat_message(Extension(user): Extension<User>, State(state): S
         "type": "chat",
         "chat_id": chat_id, 
         "message": message,
-        "username": user.username,  // for compatibility with team
+        "username": user.username,  
         "name1": user.username,
         "data": chrono::Local::now().format("%Y-%m-%d").to_string(),
         "ora": chrono::Local::now().format("%H:%M:%S").to_string(),
@@ -141,7 +139,7 @@ pub async fn get_private_online(
     State(state): State<AppState>,
     Path(chat_id): Path<i64>
 ) -> Result<impl IntoResponse, AppError> {
-    // 1. Check participant
+    
     let is_participant = sqlx::query_scalar::<_, i64>(
         "SELECT id FROM private_chats_assoc WHERE id = ?1 AND (id_user1 = ?2 OR id_user2 = ?2)"
     )
@@ -152,7 +150,6 @@ pub async fn get_private_online(
 
     if is_participant.is_none() { return Err(AppError::Forbidden); }
 
-    // 2. Retrieve online user ids from shared map
     let online_ids: HashSet<i64> = match state.online_users.get(&chat_id) {
         Some(mutex_set) => {
             let set = mutex_set.lock().await;
@@ -165,7 +162,6 @@ pub async fn get_private_online(
         return Ok(Json(Vec::<crate::models::MemberResponse>::new()));
     }
 
-    // 3. Build query to fetch usernames
     let placeholders: Vec<String> = (0..online_ids.len()).map(|_| "?".to_string()).collect();
     let sql = format!("SELECT username FROM user WHERE id IN ({})", placeholders.join(","));
     let mut query = sqlx::query_as::<_, crate::models::MemberResponse>(&sql);

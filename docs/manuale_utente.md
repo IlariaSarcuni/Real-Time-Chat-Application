@@ -48,7 +48,7 @@ Il nome "Ruggine" richiama il linguaggio di programmazione **Rust**, con cui è 
  
 | Componente | Versione minima richiesta |
 |---|---|
-| Sistema operativo | Windows 10+, macOS 12+, Linux (qualsiasi distribuzione recente) |
+| Sistema operativo | Windows 10+, Linux (qualsiasi distribuzione recente) |
 | Browser | Chrome, Firefox, Edge, Safari (versioni aggiornate) |
 | Node.js | ≥ 18.18.0 (necessario per avviare il frontend in locale) |
 | npm | ≥ 9.x (incluso con Node.js 18) |

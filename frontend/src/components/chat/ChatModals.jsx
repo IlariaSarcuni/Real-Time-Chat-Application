@@ -68,7 +68,7 @@ export function MembersModal({ show, onHide, members, onlineMembers, user }) {
 
                         return (
                             <ListGroup.Item key={idx} className="d-flex align-items-center gap-2">
-                                {/* User avatar */}
+                                
                                 <div className="text-white rounded-circle d-flex justify-content-center align-items-center"
                                     style={{ width: '30px', height: '30px', backgroundColor: getColorFromUsername(member.username) }}>
                                     {member.username.charAt(0).toUpperCase()}
