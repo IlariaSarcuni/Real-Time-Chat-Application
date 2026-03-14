@@ -60,14 +60,17 @@ Il progetto è organizzato in due macro cartelle, pensate per separare la logica
 
 ## 📊 Analisi del Build e Risorse
 
-Il sistema è stato progettato per garantire un'elevata efficienza sia in termini di occupazione su disco che di utilizzo della CPU. Per maggiori informazioni riguardo il monitoraggio delle risorse, riferirsi al [manuale del progettista](docs/manuale_progettista.md).
+Il sistema è stato progettato per garantire un'elevata efficienza sia in termini di occupazione su disco che di utilizzo della CPU. Per maggiori informazioni riguardo il monitoraggio delle risorse, riferirsi al [manuale progettista](docs/manuale_progettista.md).
 
 | Componente | Dimensione | Note di Ottimizzazione |
 | :--- | :--- | :--- |
 | **Backend (Rust)** | 2.27 MB (2.383.872 byte) | Compilazione `--release`, LTO (Link Time Optimization), stripping dei simboli. |
 | **Frontend (React)** | 2.02 MB (2.121.728 byte) | Minificazione del codice JS, compressione degli asset statici. |
 
-## Screenshots
+## 📸 Screenshots
+
+Di seguito vengono mostrati i componenti principali dell'interfaccia utente (default tema chiaro). Gli screenshot illustrano il form di login e la dashboard per la gestione delle chat private e dei team. Per una guida completa sulle funzionalità e sulle modalità di interazione con l'interfaccia, consultare il [manuale utente](docs/manuale_utente.md).
+
 ![Login Form](img/login.jpg)
 ![Chat Screen](img/chat_team.jpg)
 
