@@ -1,3 +1,4 @@
+<!-- omit in toc -->
 # Ruggine 🦀 – Manuale del Progettista
 **Sistema di messaggistica Real-Time ad alte prestazioni**
 
@@ -7,12 +8,39 @@
 
 ---
 
+<!-- omit in toc -->
 ### Gruppo di Sviluppo (G9)
 * [Agnese Re](https://github.com/AgneseRe) – Matricola: s325676
 * [Ilaria Sarcuni](https://github.com/IlariaSarcuni) – Matricola: s332008
 * [Cosimo Sergi](https://github.com/Cosser99) – Matricola: s347914
 
 **Repository Ufficiale:** [github.com/PdS2425-C2/G9](https://github.com/PdS2425-C2/G9)
+
+---
+
+<!-- omit in toc -->
+## Indice
+
+- [1. Introduzione](#1-introduzione)
+  - [Modello di comunicazione](#modello-di-comunicazione)
+- [2. Architettura del sistema e tecnologie](#2-architettura-del-sistema-e-tecnologie)
+  - [⚙️ Backend](#️-backend)
+  - [🎨 Frontend](#-frontend)
+- [3. Backend: implementazione in Rust](#3-backend-implementazione-in-rust)
+- [4. Modello dei Dati](#4-modello-dei-dati)
+  - [Tabelle Database](#tabelle-database)
+- [5. API REST](#5-api-rest)
+  - [5.1 APIs autenticazione e gestione utente](#51-apis-autenticazione-e-gestione-utente)
+  - [5.2 APIs chat private](#52-apis-chat-private)
+  - [5.3 APIs team](#53-apis-team)
+  - [5.4 APIs inviti](#54-apis-inviti)
+- [6. WebSocket](#6-websocket)
+- [7. Frontend: Integrazione React](#7-frontend-integrazione-react)
+- [8. Avvio del progetto in sviluppo](#8-avvio-del-progetto-in-sviluppo)
+  - [Backend](#backend)
+  - [Frontend](#frontend)
+- [9. Monitoraggio risorse](#9-monitoraggio-risorse)
+  - [Osservazioni](#osservazioni)
 
 ---
 
@@ -125,38 +153,51 @@ L'applicazione utilizza **SQLite** come motore di database relazionale, gestito 
 
 ## 5. API REST
 
-*Authentication APIs*
-- POST `/register`: registrazione nuovo utente.
-- POST `/login`: login. Viene creata una sessione.
-- GET `/logout`: logout. Viene distrutta la sessione.
-- GET `/me`: restituisce `{ id, username }` dell'utente corrente. Richiede autenticazione.
+### 5.1 APIs autenticazione e gestione utente
 
-*Private Chat APIs*
-- POST `/create/private`: crea una chat privata.
-- GET `/list/private`: restituisce lista delle chat private di un utente.
-- GET `/chat/messages/{chat_id}`: restituisce i messaggi di una chat privata.
-- POST `/chat/send`: invia un messaggio privato.
-- GET `/private/{chat_id}/online`: gestisce stato online in una chat privata.
-- GET `/private-unread-notifications`: conta i messaggi non ancora letti per una chat privata.
-- POST `/mark-read-private/{chat_id}`: contrassegna come letti i messaggi di una chat privata.
+| Metodo | Endpoint | Descrizione | Auth |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/register` | Registrazione di un nuovo utente nel sistema. | No |
+| **POST** | `/login` | Validazione delle credenziali e inizializzazione della sessione. | No |
+| **GET** | `/logout` | Terminazione della sessione attiva. | Sì |
+| **GET** | `/me` | Restituisce `{ id, username }` dell'utente loggato. | Sì |
 
-*Team APIs*
-- GET `/list/teams`: restituisce lista dei team a cui appartiene l'utente.
-- POST `/create`: crea un nuovo team.
-- POST `/rename`: rinomina un team esistente.
-- POST `/leave`: abbandona un team.
-- GET `/team/{team_id}/members`: restituisce la lista dei membri di un team.
-- GET `/team/{team_id}/online`: restituisce la lista dei membri online di un team.
-- GET `/messages?team_id={id}`: restituisce i messaggi di un team.
-- POST `/send`: invia un messaggio in un team.
-- GET `/unread-notifications`: conta i messaggi non ancora letti per un team.
-- POST `/mark-read/{team_id}`: contrassegna come letti i messaggi di un team.
+### 5.2 APIs chat private
 
-*Invite APIs*
-- GET `/list/invites`: restituisce lista inviti pendenti.
-- POST `/invite`: invia un invito ad un utente per entrare in un team.
-- POST `/accept`: accetta un invito ad entrare in un team.
-- POST `/decline`: declina un invito ad entrare in un team.
+| Metodo | Endpoint | Descrizione | Auth |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/create/private` | Crea una nuova chat privata tra due utenti. | Sì |
+| **GET** | `/list/private` | Recupera l'elenco di tutte le chat private dell'utente corrente. | Sì |
+| **GET** | `/chat/messages/{chat_id}` | Restituisce lo storico dei messaggi per una specifica chat privata. | Sì |
+| **POST** | `/chat/send` | Invia un nuovo messaggio all'interno di una chat privata. | Sì |
+| **GET** | `/private/{chat_id}/online` | Monitora e gestisce lo stato di presenza (online/offline) nella chat. | Sì |
+| **GET** | `/private-unread-notifications` | Restituisce il conteggio dei messaggi non letti per tutte le chat private. | Sì |
+| **POST** | `/mark-read-private/{chat_id}` | Contrassegna come *letti* i messaggi di una specifica chat privata. | Sì |
+
+### 5.3 APIs team
+
+| Metodo | Endpoint | Descrizione | Auth |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/list/teams` | Recupera l'elenco dei team di cui l'utente è membro. | Sì |
+| **POST** | `/create` | Crea un nuovo team. | Sì |
+| **POST** | `/rename` | Modifica il nome di un team esistente. | Sì |
+| **POST** | `/leave` | Rimuove l'utente corrente da un team. | Sì |
+| **GET** | `/team/{team_id}/members` | Restituisce l'elenco completo dei membri di un team. | Sì |
+| **GET** | `/team/{team_id}/online` | Restituisce l'elenco dei membri attualmente online nel team. | Sì |
+| **GET** | `/messages?team_id={id}` | Recupera lo storico dei messaggi inviati all'interno di un team. | Sì |
+| **POST** | `/send` | Invia un nuovo messaggio nel team. | Sì |
+| **GET** | `/unread-notifications` | Restituisce il conteggio dei messaggi non letti per i team dell'utente. | Sì |
+| **POST** | `/mark-read/{team_id}` | Contrassegna come *letti* i messaggi di uno specifico team. | Sì |
+
+
+### 5.4 APIs inviti
+
+| Metodo | Endpoint | Descrizione | Auth |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/list/invites` | Recupera la lista di tutti gli inviti pendenti ricevuti dall'utente. | Sì |
+| **POST** | `/invite` | Invia una richiesta di partecipazione a un team a un altro utente. | Sì |
+| **POST** | `/accept` | Accetta l'invito ricevuto e aggiunge l'utente ai membri del team. | Sì |
+| **POST** | `/decline` | Rifiuta l'invito ricevuto, rimuovendolo dalle notifiche pendenti. | Sì |
 
 ## 6. WebSocket
 
@@ -206,24 +247,26 @@ Il frontend si connette automaticamente al backend sulla porta `3000` dello stes
 
 ---
 
-## 9. Monitoraggio delle prestazioni (CPU Logger)
+## 9. Monitoraggio risorse
 
-Il task `tasks.rs` campiona l'utilizzo CPU del processo ogni **120 secondi** tramite `sysinfo` e scrive in append su `backend/cpu_log.txt`:
+Il sistema integra un modulo dedicato al *monitoraggio* delle risorse. Attraverso un task asincrono gestito dal runtime *Tokio*, viene eseguito un campionamento periodico ogni **120 secondi**. In particolare, è tracciata la percentuale di utilizzo della CPU e il tempo di attività del processo. I dati raccolti vengono salvati e aggiornati progressivamente nel file di log `backend/cpu_log.txt`. Ogni voce del file segue la sintassi di seguito riportata:
 
 ```
-[DD-MM-YYYY HH:MM:SS] CPU Usage: X.XX% | Total Run Time: Xs
+[DD-MM-YYYY HH:MM:SS] CPU Usage: X.XX% | Runtime: Xs | Cores: X
 ```
 dove:
-- `DD-MM-YYYY HH:MM:SS` è il timestamp locale al momento della rilevazione.
-- `CPU Usage` è la percentuale di utilizzo CPU del processo backend in quel preciso istante.
-- `Total Run Time` è il tempo totale di esecuzione del processo in secondi dall' avvio.
+- `DD-MM-YYYY HH:MM:SS`: rappresenta il timestamp locale al momento della rilevazione.
+- `CPU Usage`: rappresenta la percentuale di utilizzo della CPU come media nel periodo di riferimento (120s). In macchine *multi-core* può essere superiore al 100%.
+- `Runtime`: indica il tempo totale di attività del processo dall'avvio, espresso in secondi.
+- `Cores`: riporta il numero di core logici rilevati dal sistema, utile per normalizzare il dato di utilizzo della CPU.
 
 
 ### Osservazioni
 
-Dall'analisi del file `cpu_log.txt` generato durante lo sviluppo e il testing dell'applicazione emergono le seguenti osservazioni:
+Dall'analisi del file `backend/cpu_log.txt` generato durante lo sviluppo e il testing dell'applicazione emergono le seguenti osservazioni:
 
-- **Utilizzo CPU in condizioni idle:** il processo backend consuma tipicamente tra **0.00% e 0.50%** di CPU in assenza di traffico o con pochi utenti connessi. Questo conferma l'efficienza del runtime asincrono Tokio, che non spreca cicli CPU in attesa passiva di eventi.
-- **Utilizzo medio sotto carico:** durante le sessioni di test con più utenti connessi e scambio attivo di messaggi, il consumo si attesta stabilmente tra **0.50% e 2.00%**.
+- **Utilizzo CPU in condizioni idle**: con pochi utenti connessi che non interagiscono tra loro, la percentuale di utilizzo della CPU si attesta tipicamente tra 0.01% e 0.50%. Questo conferma l'efficienza del runtime asincrono *Tokio*, che non spreca cicli CPU in attesa passiva di eventi.
+- **Utilizzo medio sotto carico**: durante le sessioni di test con più utenti connessi e scambio attivo di messaggi in chat private e team, il consumo si attesta stabilmente tra **0.50% e 2.00%**.
+- **Utilizzo sotto stress**: durante i test di carico intensivi, simulando l'invio massivo di messaggi tramite script JavaScript automatizzati iniettati direttamente nella console degli strumenti per sviluppatori del browser (circa 50 al secondo), il consumo della CPU ha raggiunto picchi vicini al 4.00%.
 
-Il backend Rust risulta estremamente leggero, confermando la validità della scelta di Rust come linguaggio per il server di questa applicazione.
+Il backend risulta dunque estremamente leggero, confermando la validità della scelta di *Rust* come linguaggio per il server di Ruggine Chat.

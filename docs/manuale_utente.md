@@ -1,3 +1,4 @@
+<!-- omit in toc -->
 # Ruggine Chat 🦀 – Manuale Utente
 **Sistema di messaggistica Real-Time ad alte prestazioni**
 
@@ -7,6 +8,7 @@
 
 ---
 
+<!-- omit in toc -->
 ### Gruppo di Sviluppo (G9)
 * [Agnese Re](https://github.com/AgneseRe) – Matricola: s325676
 * [Ilaria Sarcuni](https://github.com/IlariaSarcuni) – Matricola: s332008
@@ -16,21 +18,43 @@
 
 ---
 
+<!-- omit in toc -->
 ## Indice
  
-1. [Introduzione](#1-introduzione)
-2. [Requisiti di sistema](#2-requisiti-di-sistema)
-3. [Installazione e avvio](#3-installazione-e-avvio)
-4. [Accesso all'applicazione](#4-accesso-allapplicazione)
-5. [Registrazione](#5-registrazione)
-6. [Login](#6-login)
-7. [Interfaccia principale](#7-interfaccia-principale)
-8. [Chat di gruppo](#8-chat-di-gruppo-team)
-9. [Chat private](#9-chat-private)
-10. [Inviti e notifiche](#10-inviti-e-notifiche)
-11. [Impostazioni e preferenze](#11-impostazioni-e-preferenze)
-12. [Logout](#12-logout)
-13. [Errori comuni e soluzioni](#13-errori-comuni-e-soluzioni)
+- [1. Introduzione](#1-introduzione)
+- [2. Requisiti di sistema](#2-requisiti-di-sistema)
+  - [Software](#software)
+- [3. Installazione e avvio](#3-installazione-e-avvio)
+  - [3.1 Download del progetto](#31-download-del-progetto)
+  - [3.2 Avvio del backend (Rust)](#32-avvio-del-backend-rust)
+  - [3.3 Avvio del frontend (Node.js + Vite)](#33-avvio-del-frontend-nodejs--vite)
+- [4. Accesso all'applicazione](#4-accesso-allapplicazione)
+- [5. Registrazione](#5-registrazione)
+- [6. Login](#6-login)
+- [7. Interfaccia principale](#7-interfaccia-principale)
+  - [7.1 Barra di navigazione (in alto)](#71-barra-di-navigazione-in-alto)
+  - [7.2 Colonna laterale sinistra (sidebar)](#72-colonna-laterale-sinistra-sidebar)
+  - [7.3 Finestra di chat (area centrale)](#73-finestra-di-chat-area-centrale)
+- [8. Chat di gruppo](#8-chat-di-gruppo)
+  - [8.1 Entrare in un gruppo](#81-entrare-in-un-gruppo)
+  - [8.2 Creare un nuovo gruppo](#82-creare-un-nuovo-gruppo)
+  - [8.3 Inviare un messaggio in un gruppo](#83-inviare-un-messaggio-in-un-gruppo)
+  - [8.4 Visualizzare i membri del gruppo](#84-visualizzare-i-membri-del-gruppo)
+  - [8.5 Invitare un utente nel gruppo](#85-invitare-un-utente-nel-gruppo)
+  - [8.6 Rinominare il gruppo](#86-rinominare-il-gruppo)
+  - [8.7 Abbandonare un gruppo](#87-abbandonare-un-gruppo)
+  - [8.8 Presenza online nel gruppo](#88-presenza-online-nel-gruppo)
+- [9. Chat private](#9-chat-private)
+  - [9.1 Avviare una nuova chat privata](#91-avviare-una-nuova-chat-privata)
+  - [9.2 Inviare un messaggio privato](#92-inviare-un-messaggio-privato)
+  - [9.3 Presenza nella chat privata](#93-presenza-nella-chat-privata)
+- [10. Inviti e notifiche](#10-inviti-e-notifiche)
+  - [10.1 Inviti ai gruppi](#101-inviti-ai-gruppi)
+  - [10.2 Messaggi non letti](#102-messaggi-non-letti)
+- [11. Impostazioni e preferenze](#11-impostazioni-e-preferenze)
+  - [11.1 Tema chiaro / scuro](#111-tema-chiaro--scuro)
+- [12. Logout](#12-logout)
+- [13. Errori comuni e soluzioni](#13-errori-comuni-e-soluzioni)
  
 ---
  
