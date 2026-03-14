@@ -116,5 +116,4 @@ async fn auth_middleware(auth: AuthSession<User, i64, SessionSqlitePool, SqliteP
     } else {
         (axum::http::StatusCode::UNAUTHORIZED, "Non autorizzato").into_response()
     }
-
 }
