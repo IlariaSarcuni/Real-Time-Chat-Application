@@ -121,14 +121,9 @@ L'applicazione utilizza **SQLite** come motore di database relazionale, gestito 
 
 Il backend espone tre endpoint WebSocket, tutti protetti da un *middleware* di autenticazione. Prima di ogni upgrade, il server esegue una verifica dei permessi. In caso di accesso non autorizzato, la connessione viene rifiutata con `403 Forbidden`.
 
-### `/ws/team/{id}`
-Connessione WebSocket per una stanza di team. Prima dell'upgrade, il backend verifica tramite query SQL che l'utente sia membro del team. Una volta connesso, il client riceve in tempo reale tutti i messaggi inviati da qualunque membro del gruppo, nonché gli eventi di presenza (online/offline) degli altri partecipanti.
-
-### `/ws/private/{id}`
-Connessione WebSocket per una chat privata. Prima dell'upgrade, il backend verifica che l'utente sia uno dei due partecipanti della chat. Il funzionamento è analogo alla stanza di team, ma limitato ai soli due utenti coinvolti.
-
-### `/ws/global`
-Connessione WebSocket globale per la gestione della presenza. Viene aperta dal frontend non appena l'utente effettua il login e rimane attiva per tutta la sessione. Alla connessione l'utente viene registrato nella `presence_map` e viene notificata la sua presenza online a tutti i canali broadcast attivi (team e chat private) a cui appartiene. Alla disconnessione viene rimosso dalla mappa e notificata la sua assenza.
+- `/ws/team/{id}`: connessione WebSocket per una stanza di team. Prima dell'upgrade, il backend verifica tramite query SQL che l'utente sia membro del team. Una volta connesso, il client riceve in tempo reale tutti i messaggi inviati da qualunque membro del gruppo, nonché gli eventi di presenza (online/offline) degli altri partecipanti.
+- `/ws/private/{id}`: connessione WebSocket per una chat privata. Prima dell'upgrade, il backend verifica che l'utente sia uno dei due partecipanti della chat. Il funzionamento è analogo alla stanza di team, ma limitato ai soli due utenti coinvolti.
+- `/ws/global`: connessione WebSocket globale per la gestione della presenza. Viene aperta dal frontend non appena l'utente effettua il login e rimane attiva per tutta la sessione. Alla connessione l'utente viene registrato nella `presence_map` e viene notificata la sua presenza online a tutti i canali broadcast attivi (team e chat private) a cui appartiene. Alla disconnessione viene rimosso dalla mappa e notificata la sua assenza.
 
 ## 7. Frontend: Integrazione React
 - `App` (in `src/App.jsx`): componente principale dell'applicazione. Avvolge tutti i componenti in un *ThemeContext.Provider* per gestire il tema (chiaro oppure scuro) e utilizza *Routes* e *Route* di *react-router-dom* per definire la navigazione;
