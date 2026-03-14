@@ -28,6 +28,47 @@ L'applicazione adotta un modello di comunicazione ibrido tra frontend e backend,
 
 ## 2. Architettura del sistema e tecnologie
 
+```mermaid
+graph TD
+    %% styles
+    classDef frontend fill:#61dafb, stroke:#20232a, stroke-width:2px, color:#000;
+    classDef backend fill:#f74c00, stroke:#2e2e2e, stroke-width:2px, color:#fff;
+    classDef database fill:#003b57, stroke:#2e2e2e, stroke-width:2px, color:#fff;
+    classDef storage fill:#fff, stroke:#333, stroke-dasharray: 5 5;
+
+    subgraph Client ["Frontend (React + Vite)"]
+        UI[Interfaccia Utente]
+        RC[React Components]
+    end
+
+    subgraph Server ["Backend (Rust + Axum)"]
+        AUTH[Modulo Auth]
+        WS[Gestore WebSocket]
+        LOG[CPU Logger]
+        STATE[Stato Condiviso / DashMap]
+    end
+
+    subgraph Persistenza ["Storage"]
+        DB[(SQLite / SQLx)]
+        FILE[cpu_log.txt]
+    end
+
+    %% Canali di Comunicazione
+    UI <--> |"HTTP / REST (JSON)"| AUTH
+    UI <--> |"WebSockets"| WS
+    
+    %% Interazioni Interne Backend
+    AUTH <--> DB
+    WS <--> STATE
+    LOG -.-> |"Append"| FILE
+    
+    %% Applicazione classi
+    class UI,RC frontend;
+    class AUTH,WS,LOG,STATE backend;
+    class DB database;
+    class FILE storage;
+```
+
 L’architettura di *Ruggine Chat* si avvale di uno stack tecnologico all'avanguardia, dove la scelta di ciascun componente è stata guidata dalla necessità di coniugare elevate prestazioni computazionali a una gestione rigorosa della sicurezza dei dati. I principali componenti, le tecnologie e le relative funzionalità sono illustrati di seguito.
 
 ### ⚙️ Backend
