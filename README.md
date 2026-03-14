@@ -58,13 +58,18 @@ Il progetto è organizzato in due macro cartelle, pensate per separare la logica
     npm run build    # Genera cartella /dist ottimizzata
     ```
 
-## Monitoraggio Risorse e Performance
-Backend (Eseguibile Rust): 2.21 MB (2.321.408 byte) (ottimizzato con LTO e stripping dei simboli).
+## 📊 Analisi del Build e Risorse
 
-Frontend (Asset statici): 2.00 MB (2.102.776 byte) (codice JavaScript minificato e pronto per la distribuzione).
+Il sistema è stato progettato per garantire un'elevata efficienza sia in termini di occupazione su disco che di utilizzo della CPU. Per maggiori informazioni riguardo il monitoraggio delle risorse, riferirsi al [manuale del progettista](docs/manuale_progettista.md).
+
+| Componente | Dimensione | Note di Ottimizzazione |
+| :--- | :--- | :--- |
+| **Backend (Rust)** | 2.27 MB (2.383.872 byte) | Compilazione `--release`, LTO (Link Time Optimization), stripping dei simboli. |
+| **Frontend (React)** | 2.02 MB (2.121.728 byte) | Minificazione del codice JS, compressione degli asset statici. |
 
 ## Screenshots
 ![Login Form](img/login.jpg)
 ![Chat Screen](img/chat_team.jpg)
+
 ## Licenza
-This project is licensed under the MIT License.
+Questo progetto è distribuito sotto licenza **MIT**.

@@ -233,7 +233,7 @@ Il build di release è configurato in `Cargo.toml` con ottimizzazioni per la dim
 cargo build --release
 ./target/release/backend
 ```
-> **Dimensione binario release:** `backend.exe` — **2.29 MB**.
+> **Dimensione binario release** `backend.exe`: **2.27 MB (2.383.872 byte)**.
 
 ### Frontend
 
@@ -243,7 +243,9 @@ npm install      # al primo avvio o dopo aggiornamenti dipendenze
 npm run dev
 ```
 
-Il frontend si connette automaticamente al backend sulla porta `3000` dello stesso host, grazie alla funzione `getBaseUrl()` in `API.js` che legge dinamicamente `window.location.hostname`.
+Il frontend si connette automaticamente al backend sulla porta `3000` dello stesso host, grazie alla funzione `getBaseUrl()` in `API.js`. 
+
+> **Dimensione bundle statico**: **2.02 MB (2.121.728 byte)** (codice JavaScript minificato e asset ottimizzati).
 
 ---
 
