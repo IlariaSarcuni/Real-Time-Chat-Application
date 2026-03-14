@@ -1,5 +1,5 @@
 <!-- omit in toc -->
-# Ruggine 🦀 – Manuale del Progettista
+# Ruggine 🦀 – Manuale Progettista
 **Sistema di messaggistica Real-Time ad alte prestazioni**
 
 **Corso:** Programmazione di Sistema (02GRSYG)  
