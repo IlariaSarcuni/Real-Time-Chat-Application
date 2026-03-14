@@ -127,6 +127,7 @@ function ChatPage({ user }) {
             const endpoint = activeRoom.type === 'team' ? `team/${activeRoom.id}` : `private/${activeRoom.id}`;
             
             socket = new WebSocket(`${wsProtocol}//${hostname}:${wsPort}/ws/${endpoint}`);
+            window.socket = socket;     // for stress test on browser console
 
             socket.onmessage = (e) => {
                 if (!isMounted) return;
