@@ -25,7 +25,7 @@
 5. [Registrazione](#5-registrazione)
 6. [Login](#6-login)
 7. [Interfaccia principale](#7-interfaccia-principale)
-8. [Chat di gruppo (Team)](#8-chat-di-gruppo-team)
+8. [Chat di gruppo](#8-chat-di-gruppo-team)
 9. [Chat private](#9-chat-private)
 10. [Inviti e notifiche](#10-inviti-e-notifiche)
 11. [Impostazioni e preferenze](#11-impostazioni-e-preferenze)
@@ -48,8 +48,8 @@ Il nome "Ruggine" richiama il linguaggio di programmazione **Rust**, con cui è 
  
 | Componente | Versione minima richiesta |
 |---|---|
-| Sistema operativo | Windows 10+, Linux (qualsiasi distribuzione recente) |
-| Browser | Chrome, Firefox, Edge, Safari (versioni aggiornate) |
+| Sistema operativo | Windows 10+, Linux |
+| Browser | Chrome, Firefox, Edge |
 | Node.js | ≥ 18.18.0 (necessario per avviare il frontend in locale) |
 | npm | ≥ 9.x (incluso con Node.js 18) |
 | Rust toolchain | ≥ 1.85 (installabile tramite [rustup](https://rustup.rs/)) |
@@ -179,7 +179,7 @@ Occupa la parte principale dello schermo. Quando nessuna conversazione è selezi
  
 ---
  
-## 8. Chat di gruppo (Team)
+## 8. Chat di gruppo
 
 ![Chat Gruppo](../img/chat_gruppo.jpg)
 
