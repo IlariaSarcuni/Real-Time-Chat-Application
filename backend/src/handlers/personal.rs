@@ -1,12 +1,13 @@
 use axum::{Extension, Json, extract::{State, Path}, response::IntoResponse};
-use serde_json::{Value, json};
 use std::collections::{HashSet, HashMap};
+use serde_json::{Value, json};
 
 use crate::{models::*, error::AppError, state::AppState};
 
-// --- LIST PRIVATE CHATS ---
-pub async fn get_chat_list(Extension(user): Extension<User>, State(state): State<AppState>)-> Result<impl IntoResponse, AppError>
-{
+// --- LIST PRIVATE CHATS (id, other_username, other_user_id) ---
+pub async fn get_chat_list(Extension(user): Extension<User>, 
+    State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
+
     let rows: Vec<ChatListRow> = sqlx::query_as("SELECT c.id,
         CASE 
             WHEN c.id_user1 = ?1 THEN u2.username ELSE u1.username 
@@ -26,7 +27,9 @@ pub async fn get_chat_list(Extension(user): Extension<User>, State(state): State
 }
 
 // --- NEW PRIVATE CHAT ---
-pub async fn create_chat(Extension(user): Extension<User>, State(state): State<AppState>, Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+pub async fn create_chat(Extension(user): Extension<User>, 
+    State(state): State<AppState>, 
+    Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
     
     let target_username = body.get("username").and_then(|v| v.as_str()).ok_or(AppError::BadRequest("Username non trovato".into()))?;
     
@@ -54,9 +57,11 @@ pub async fn create_chat(Extension(user): Extension<User>, State(state): State<A
      Ok(Json(json!({ "id": result.last_insert_rowid(), "success": true, "message": "Chat creata." })))
 }
 
-// --- CHAT MESSAGES ---
-pub async fn get_chat_messages(Extension(user): Extension<User>, State(state): State<AppState>, Path(chat_id): Path<i64>)-> Result<impl IntoResponse, AppError>
-{
+// --- GET CHAT MESSAGES ---
+pub async fn get_chat_messages(Extension(user): Extension<User>, 
+    State(state): State<AppState>, 
+    Path(chat_id): Path<i64>)-> Result<impl IntoResponse, AppError> {
+
     let is_participant = sqlx::query_scalar::<_, i64>(
         "SELECT id FROM private_chats_assoc WHERE id = ?1 AND (id_user1 = ?2 OR id_user2 = ?2)"
     ).bind(chat_id).bind(user.id).fetch_optional(&state.pool).await?;
@@ -72,8 +77,10 @@ pub async fn get_chat_messages(Extension(user): Extension<User>, State(state): S
 }
 
 // --- SEND CHAT MESSAGE ---
-pub async fn send_chat_message(Extension(user): Extension<User>, State(state): State<AppState>, Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> 
-{
+pub async fn send_chat_message(Extension(user): Extension<User>, 
+    State(state): State<AppState>, 
+    Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+
     let chat_id = body.get("chat_id").and_then(|v| v.as_i64()).ok_or(AppError::BadRequest("ID chat mancante".into()))?;
     let message = body.get("message").and_then(|v| v.as_str()).unwrap_or("");
 
@@ -172,8 +179,11 @@ pub async fn get_private_online(
 }
 
 // --- GET UNREAD NOTIFICATIONS FOR PRIVATE CHATS ---
-pub async fn get_unread_notifications(Extension(user): Extension<User>, State(state): State<AppState>) -> Result<Json<HashMap<i64, i64>>, AppError> {
-    // Recupera tutte le chat private dell'utente e conta i messaggi non letti
+pub async fn get_unread_notifications(Extension(user): Extension<User>, 
+    State(state): State<AppState>) -> Result<Json<HashMap<i64, i64>>, AppError> {
+
+    // Count unread messagges. Compare data and hour of last access of user with data and hour of messages
+    // Each data is greater than an empty string. Useful for handling cases of never opened chat.
     let rows: Vec<(i64, i64)> = sqlx::query_as(
         r#"
         SELECT pca.id, COUNT(pm.id_chat) as notification
@@ -209,8 +219,10 @@ pub async fn get_unread_notifications(Extension(user): Extension<User>, State(st
 }
 
 // --- MARK PRIVATE CHAT AS READ ---
-pub async fn mark_as_read(Extension(user): Extension<User>, State(state): State<AppState>, Path(chat_id): Path<i64>) -> Result<impl IntoResponse, AppError> {
-    // Verificare che l'utente sia partecipante della chat
+pub async fn mark_as_read(Extension(user): Extension<User>, 
+    State(state): State<AppState>, 
+    Path(chat_id): Path<i64>) -> Result<impl IntoResponse, AppError> {
+    
     let chat_info: (i64, i64) = sqlx::query_as(
         "SELECT id_user1, id_user2 FROM private_chats_assoc WHERE id = ?1 AND (id_user1 = ?2 OR id_user2 = ?2)"
     )
@@ -220,15 +232,15 @@ pub async fn mark_as_read(Extension(user): Extension<User>, State(state): State<
     .await?
     .ok_or(AppError::Forbidden)?;
 
-    // Aggiornare le colonne giuste a seconda di quale utente è
+    // Update last data and last hour of access
     if chat_info.0 == user.id {
-        // Utente 1
+        // User 1
         sqlx::query("UPDATE private_chats_assoc SET last_data_user1 = CURRENT_DATE, last_ora_user1 = CURRENT_TIME WHERE id = ?1")
             .bind(chat_id)
             .execute(&state.pool)
             .await?;
     } else {
-        // Utente 2
+        // User 2
         sqlx::query("UPDATE private_chats_assoc SET last_data_user2 = CURRENT_DATE, last_ora_user2 = CURRENT_TIME WHERE id = ?1")
             .bind(chat_id)
             .execute(&state.pool)
