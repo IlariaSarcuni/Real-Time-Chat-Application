@@ -1,6 +1,6 @@
-use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
-use axum_session_auth::AuthSession;       
+use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};     
 use axum_session_sqlx::SessionSqlitePool; 
+use axum_session_auth::AuthSession;
 use sqlx::SqlitePool;
 use serde_json::json;
 
@@ -51,7 +51,10 @@ pub async fn login(
     Err(AppError::LoginFail)
 }
 
-pub async fn log_out(auth: AuthSession<User, i64, SessionSqlitePool, SqlitePool>, State(state): State<AppState>) -> impl IntoResponse {
+pub async fn log_out(
+    auth: AuthSession<User, i64, SessionSqlitePool, SqlitePool>, 
+    State(state): State<AppState>
+) -> impl IntoResponse {
     if let Some(user) = auth.current_user.clone() {
         state.presence_map.remove(&user.id);
     }
