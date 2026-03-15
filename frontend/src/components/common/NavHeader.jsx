@@ -35,12 +35,12 @@ function NavHeader(props) {
                             </span>
                         )}
 
-                        {/* Cambio Tema */}
+                        {/* Switch theme (light/dark) */}
                         <Button variant="link" onClick={props.toggleTheme} className="text-white p-0">
                             <i className={`fs-4 ${theme === "light" ? "bi bi-sun" : "bi bi-moon-stars"}`}></i>
                         </Button>
 
-                        {/* Se è loggato allora logout altrimmenti nulla */}
+                        {/* If logged, logout, otherwise nothing */}
                         {props.loggedIn ? (
                             <Button variant="outline-light" className="d-flex align-items-center fw-semibold px-3 py-2" onClick={props.logout}>
                                 Logout

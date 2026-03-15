@@ -35,7 +35,7 @@ async function handleResponse(response) {
     return true; 
 }
 
-// AUTH & USER
+// --- AUTHENTICATION AND USER ---
 const register = async (credentials) => {
     const response = await fetch(`${SERVER_URL}/register`, {
         method: 'POST',
@@ -72,7 +72,7 @@ const getUserInfo = async () => {
     return await handleResponse(response);
 }
 
-// GRUPPI E MESSAGGI
+// --- TEAM ---
 const getTeams = async () => {
     const response = await fetch(`${SERVER_URL}/list/teams`, { method: 'GET', credentials: 'include' });
     return await handleResponse(response);
@@ -96,7 +96,6 @@ const markAsRead = async (teamId) => {
     return await handleResponse(response);
 };
 
-// LISTA MEMBRI
 const getTeamMembers = async (teamId) => {
     const response = await fetch(`${SERVER_URL}/team/${teamId}/members`, { method: 'GET', credentials: 'include' });
     return await handleResponse(response);
@@ -152,7 +151,7 @@ const leaveTeam = async (teamId) => {
     return await handleResponse(response);
 };
 
-// CHAT
+// --- PRIVATE CHAT ---
 const createPrivateChat = async (username) => {
     const response = await fetch(`${SERVER_URL}/create/private`, {
         method: 'POST',
@@ -206,7 +205,7 @@ const sendPrivateMessage = async (id, msg, from, to) => {
     return await handleResponse(response);
 };
 
-// INVITI
+// --- INVITES ---
 const inviteUser = async (username, teamId) => {
     const response = await fetch(`${SERVER_URL}/invite`, {
         method: 'POST',
@@ -243,7 +242,7 @@ const declineInvite = async (teamId) => {
     return await handleResponse(response);
 };
 
-// PRESENCE
+// --- GLOBAL PRESENCE ---
 const heartbeatPresence = async () => {
     const response = await fetch(`${SERVER_URL}/presence/heartbeat`, { method: 'POST', credentials: 'include' });
     return await handleResponse(response);

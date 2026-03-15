@@ -30,7 +30,7 @@ function ChatWindow({ activeRoom, messages, user, errorMsg, setErrorMsg, newMess
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
     }, [messages]);
 
-    // Stili
+    // Styles
     const chatBg = theme === 'dark' ? '#212529' : '#e5ddd5';
     const headerClass = theme === 'dark' ? 'bg-dark border-secondary text-white' : 'bg-white text-dark';
 

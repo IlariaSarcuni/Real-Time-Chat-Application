@@ -68,7 +68,6 @@ body[data-theme="dark"] .group-actions-header:focus:active {
     background-color: #8C320A !important;
     border-color: #8C320A !important;
 }
-/* Pannelli */
 
 .light .chat-sidebar {
     background-color: #FFFFFF !important; 
@@ -85,8 +84,7 @@ body[data-theme="dark"] .group-actions-header:focus:active {
     background-color: #F0F0F0 !important; 
 }
 
-/* Colonna gruppi e inviti */
-
+/* Teams and invites */
 .light .list-group-item {
     color: #212529;
     background-color: transparent;
@@ -98,7 +96,7 @@ body[data-theme="dark"] .group-actions-header:focus:active {
     background-color: #FAFAFA !important;
 }
 
-/* Gruppo attivo */
+/* Active team */
 .light .list-group-item.active {
     background-color: #FFEEEC !important; 
     border-left: 4px solid #B7410E !important; 
@@ -107,7 +105,6 @@ body[data-theme="dark"] .group-actions-header:focus:active {
     padding-left: calc(1.5rem - 4px); 
 }
 
-/* Inviti */
 .light .invite-section {
     background-color: #FFFBEB !important; 
     border-color: #ffe5a8 !important;
@@ -117,9 +114,6 @@ body[data-theme="dark"] .group-actions-header:focus:active {
     background-color: #FFFFFF !important;
     border-color: #E0E0E0 !important;
 }
-
-
-/* Chat content */
 
 .light .bg-success.text-white {
     background-color: #DFFFD8 !important; 
@@ -148,13 +142,10 @@ body[data-theme="dark"] .group-actions-header:focus:active {
 
 
 /* DARK MODE */
-
 .dark {
     background-color: #1A1A1A; 
     color: #E0E0E0; 
 }
-
-/* Pannelli */
 
 .dark .chat-sidebar,
 .dark .p-3.border-bottom, 
@@ -170,9 +161,6 @@ body[data-theme="dark"] .group-actions-header:focus:active {
 
 .dark .text-muted { color: #888888 !important; } 
 .dark .text-dark { color: #E0E0E0 !important; } 
-
-
-/* Gruppi e inviti */
 
 .dark .list-group-item {
     color: #C0C0C0;

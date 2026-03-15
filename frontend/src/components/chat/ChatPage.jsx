@@ -10,22 +10,22 @@ import { CreateChatModal, CreateTeamModal, InviteModal, MembersModal, RenameModa
 function ChatPage({ user }) {
     const theme = useContext(ThemeContext);
 
-    // STATI DATI
+    // STATE DATA
     const [teams, setTeams] = useState([]);
     const [chats, setChats] = useState([]);
     const [invites, setInvites] = useState([]);
     const [notifications, setNotifications] = useState({}); 
 
-    // ACTIVE ROOM
+    // STATE ACTIVE ROOM
     const [activeRoom, setActiveRoom] = useState({ type: null, id: null, data: null });
     const [messages, setMessages] = useState([]);
     const [onlineMembers, setOnlineMembers] = useState([]);
 
-    // STATI INPUT & UI
+    // STATE INPUT AND UI
     const [newMessage, setNewMessage] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
 
-    // STATI MODALI
+    // STATE MODALS
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newTeamName, setNewTeamName] = useState("");
     const [showInviteModal, setShowInviteModal] = useState(false);
@@ -39,7 +39,7 @@ function ChatPage({ user }) {
 
     const chatBg = theme === 'dark' ? '#212529' : '#e5ddd5';
 
-    // --- REFRESH DATI (API) ---
+    // --- REFRESH DATA (API) ---
     const refreshAllData = useCallback(async () => {
         if (!user) return { teams: [], chats: [], invites: [] };
 
@@ -56,7 +56,7 @@ function ChatPage({ user }) {
             const chatsData = Array.isArray(c) ? c : [];
             const invitesData = Array.isArray(inv) ? inv : [];
             
-            //Notifiche di team e chat private 
+            // Team and private chat notifications
             const teamNotifs = Object.entries(unreadTeams || {}).reduce((acc, [id, count]) => {
                 acc[`team_${id}`] = count;
                 return acc;
@@ -92,7 +92,7 @@ function ChatPage({ user }) {
         let isMounted = true;
         let socket = null;
 
-        // Caricamento iniziale messaggi
+        // Messages initial loading
         const fetchInitialData = async () => {
             try {
                 let msgs = [];
@@ -119,7 +119,7 @@ function ChatPage({ user }) {
 
         fetchInitialData();
 
-        // Configurazione WebSocket con riconnessione
+        // WebSocket configuration with reconnection
         const connectWS = () => {
             const { hostname, protocol } = window.location;
             const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
@@ -138,7 +138,7 @@ function ChatPage({ user }) {
                     const incomingId = data.chat_id || data.team_id;
 
                     if (data.type === "chat") {
-                        // Solo messaggi da altri utenti
+                        // only messages from other users
                         if (data.username === user.username) {
                             if (incomingId === activeRoom.id) {
                                 setMessages(prev => [...prev, data]);
@@ -146,11 +146,11 @@ function ChatPage({ user }) {
                         } else {
                             if (incomingId === activeRoom.id) {
                                 setMessages(prev => [...prev, data]);
-                                // Azzera notifica se sei già nella chat attiva
+                                // notifications zero if already in active chat
                                 const notifKey = activeRoom.type === 'team' ? `team_${activeRoom.id}` : `chat_${activeRoom.id}`;
                                 setNotifications(prev => ({ ...prev, [notifKey]: 0 }));
                             } else {
-                                // Le notifiche vengono gestite dal backend
+                                // notifications are handled via backend
                             }
                         }
                     } else if (data.type === "online") {
@@ -178,7 +178,7 @@ function ChatPage({ user }) {
         };
     }, [activeRoom, user.username]); 
 
-    //HANDLERS
+    // HANDLERS
     const handleSendMessage = async (e) => {
         e.preventDefault();
         if (!newMessage.trim() || !activeRoom.id) return;
