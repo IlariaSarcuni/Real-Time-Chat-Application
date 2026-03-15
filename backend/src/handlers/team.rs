@@ -5,21 +5,29 @@ use chrono::Local;
 
 use crate::{models::*, error::AppError, state::AppState};
 
-// Verifica se un utente è nel team
+// --- CHECK IF A USER BELONGS TO THE TEAM ---
 async fn check_membership(user_id: i64, team_id: i64, pool: &sqlx::SqlitePool) -> Result<bool, AppError> {
+
     let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user_team WHERE id_user = ?1 AND id_team = ?2)")
         .bind(user_id).bind(team_id).fetch_one(pool).await?;
+
     Ok(exists)
 }
 
-// --- GET ---
-pub async fn get_teams(Extension(user): Extension<User>, State(state): State<AppState>) -> Result<Json<Vec<Team>>, AppError> {
+// --- LIST TEAMS (id, name) ---
+pub async fn get_teams(Extension(user): Extension<User>, 
+    State(state): State<AppState>) -> Result<Json<Vec<Team>>, AppError> {
+
     let rows = sqlx::query_as(r#"SELECT t.id, t.name FROM team t JOIN user_team ut ON ut.id_team = t.id WHERE ut.id_user = ?1"#)
         .bind(user.id).fetch_all(&state.pool).await?;
+
     Ok(Json(rows))
 }
 
-pub async fn get_list_invites(Extension(user): Extension<User>, State(state): State<AppState>) -> Result<Json<Vec<InviteWithSender>>, AppError> {
+// --- LIST INVITES (user invited in a team by another user) ---
+pub async fn get_list_invites(Extension(user): Extension<User>, 
+    State(state): State<AppState>) -> Result<Json<Vec<InviteWithSender>>, AppError> {
+
     let rows = sqlx::query_as(r#"
         SELECT t.id, t.name, COALESCE(u.username, 'Unknown') as invited_by
         FROM invite i
@@ -28,16 +36,23 @@ pub async fn get_list_invites(Extension(user): Extension<User>, State(state): St
         WHERE i.id_user = ?1
     "#)
         .bind(user.id).fetch_all(&state.pool).await?;
+
     Ok(Json(rows))
 }
 
-pub async fn get_team_members(Extension(user): Extension<User>, State(state): State<AppState>, Path(team_id): Path<i64>) -> Result<impl IntoResponse, AppError> {
+// --- LIST TEAM MEMBERS ---
+pub async fn get_team_members(Extension(user): Extension<User>, 
+    State(state): State<AppState>, 
+    Path(team_id): Path<i64>) -> Result<impl IntoResponse, AppError> {
+
     if !check_membership(user.id, team_id, &state.pool).await? { return Err(AppError::Forbidden); }
     let members: Vec<MemberResponse> = sqlx::query_as("SELECT u.username FROM user u INNER JOIN user_team ut ON ut.id_user = u.id WHERE ut.id_team = ?1 ORDER BY u.username")
         .bind(team_id).fetch_all(&state.pool).await?;
+
     Ok(Json(members))
 }
 
+// --- LIST ONLINE MEMBERS ---
 pub async fn get_online_members(
     Extension(user): Extension<User>,
     State(state): State<AppState>,
@@ -74,7 +89,10 @@ pub async fn get_online_members(
     (StatusCode::OK, Json(online_members)).into_response()
 }
 
-pub async fn get_unread_notifications(Extension(user): Extension<User>, State(state): State<AppState>) -> Result<Json<HashMap<i64, i64>>, AppError> {
+// --- GET UNREAD NOTIFICATIONS FOR TEAMS ---
+pub async fn get_unread_notifications(Extension(user): Extension<User>, 
+    State(state): State<AppState>) -> Result<Json<HashMap<i64, i64>>, AppError> {
+
     let rows: Vec<UnreadCount> = sqlx::query_as(r#"
         SELECT ut.id_team, COUNT(m.id_message) as notification
         FROM user_team ut
@@ -93,19 +111,26 @@ pub async fn get_unread_notifications(Extension(user): Extension<User>, State(st
     for row in rows {
         counts.insert(row.id_team, row.notification as i64);
     }
+
     Ok(Json(counts))
 }
 
-pub async fn mark_as_read(Extension(user): Extension<User>, State(state): State<AppState>,
+// --- MARK TEAM MESSAGES AS READ ---
+pub async fn mark_as_read(Extension(user): Extension<User>, 
+    State(state): State<AppState>,
     Path(team_id): Path<i64>) -> Result<impl IntoResponse, AppError> {
+
     sqlx::query("UPDATE user_team SET last_data = CURRENT_DATE, last_ora = CURRENT_TIME WHERE id_user = ?1 AND id_team = ?2")
         .bind(user.id).bind(team_id).execute(&state.pool).await?;
 
     Ok(StatusCode::OK)
 }
 
-// --- AZIONI TEAM ---
-pub async fn create_team(Extension(user): Extension<User>, State(state): State<AppState>, Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+// --- NEW TEAM ---
+pub async fn create_team(Extension(user): Extension<User>, 
+    State(state): State<AppState>, 
+    Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+        
     let name = body.get("name").and_then(|v| v.as_str()).unwrap_or("");
     if name.trim().is_empty() { return Err(AppError::BadRequest("Nome gruppo richiesto.".into())); }
 
@@ -113,7 +138,7 @@ pub async fn create_team(Extension(user): Extension<User>, State(state): State<A
     let team_id = insert_res.last_insert_rowid();
     sqlx::query("INSERT INTO user_team (id_user, id_team) VALUES (?1, ?2)").bind(user.id).bind(team_id).execute(&state.pool).await?;
 
-    // Traccia il momento di ingresso per nascondere i messaggi precedenti al join
+    // Track join time to hide previous messages (before the join)
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS user_team_join (id_user INTEGER NOT NULL, id_team INTEGER NOT NULL, joined_at TEXT NOT NULL, PRIMARY KEY (id_user, id_team))"
     ).execute(&state.pool).await?;
@@ -123,7 +148,11 @@ pub async fn create_team(Extension(user): Extension<User>, State(state): State<A
     Ok((StatusCode::CREATED, Json(json!({ "success": true, "message": "Gruppo creato!", "team": { "id": team_id, "name": name } }))))
 }
 
-pub async fn rename_team(Extension(user): Extension<User>, State(state): State<AppState>, Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+// --- RENAME TEAM ---
+pub async fn rename_team(Extension(user): Extension<User>, 
+    State(state): State<AppState>, 
+    Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+
     let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
     let new_name = body.get("new_name").and_then(|v| v.as_str()).unwrap_or("");
 
@@ -131,31 +160,34 @@ pub async fn rename_team(Extension(user): Extension<User>, State(state): State<A
     if !check_membership(user.id, team_id, &state.pool).await? { return Err(AppError::Forbidden); }
 
     sqlx::query("UPDATE team SET name = ?1 WHERE id = ?2").bind(new_name).bind(team_id).execute(&state.pool).await?;
+
     Ok(Json(json!({ "success": true, "message": "Gruppo rinominato." })))
 }
 
-pub async fn leave_team(Extension(user): Extension<User>, State(state): State<AppState>, Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+// --- LEAVE TEAM ---
+pub async fn leave_team(Extension(user): Extension<User>, 
+    State(state): State<AppState>, 
+    Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+
     let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
     if team_id == 0 { return Err(AppError::BadRequest("ID Gruppo invalido.".into())); }
 
     let mut tx = state.pool.begin().await?;
-    // Se ultimo membro ad uscire allora cancella pure il gruppo e i messaggi dalla tabella
+    
     let (members_count,): (i64,) =sqlx::query_as("SELECT COUNT(*) FROM user_team WHERE id_team = ?1").bind(team_id).fetch_one(&mut *tx).await?;
 
-    //
     sqlx::query("DELETE FROM user_team WHERE id_user = ?1 AND id_team = ?2").bind(user.id).bind(team_id).execute(&mut *tx).await?;
     sqlx::query("DELETE FROM user_team_join WHERE id_user = ?1 AND id_team = ?2").bind(user.id).bind(team_id).execute(&mut *tx).await?;
-    if members_count==1
-    {
+
+    // If last member leaves the team, delete the team and its messages
+    if members_count==1 {
         sqlx::query("DELETE FROM team WHERE id= ?1").bind(team_id).execute(&mut *tx).await?;
-        //cancello i messaggi
         sqlx::query("DELETE FROM message WHERE id_team= ?1").bind(team_id).execute(&mut *tx).await?;
-        // pulizia join table
         sqlx::query("DELETE FROM user_team_join WHERE id_team = ?1").bind(team_id).execute(&mut *tx).await?;
         
         tx.commit().await?;
         
-         // send notification message user left team
+        // Send notification message user left team
         let system_message = format!(r#"{{"type": "system", "message": "{} ha abbandonato il gruppo", "username": "{}", "event": "left"}}"#, user.username, user.username);
         if let Some(tx) = state.chat_rooms.get(&team_id) {
             let _ = tx.send(system_message.clone());
@@ -165,6 +197,7 @@ pub async fn leave_team(Extension(user): Extension<User>, State(state): State<Ap
             "message": "Hai abbandonato il gruppo."
         })));
     }
+
     let system_message_db = format!("{} ha abbandonato il gruppo", user.username);
     sqlx::query("INSERT INTO message (id_user, id_team, message, data, ora, type) VALUES (?1, ?2, ?3, CURRENT_DATE, CURRENT_TIME, 'system')")
         .bind(user.id).bind(team_id).bind(&system_message_db).execute(&mut *tx).await?;
@@ -179,8 +212,11 @@ pub async fn leave_team(Extension(user): Extension<User>, State(state): State<Ap
     Ok(Json(json!({ "success": true, "message": "Hai abbandonato il gruppo." })))
 }
 
-// --- INVITI ---
-pub async fn invite(Extension(user): Extension<User>, State(state): State<AppState>, Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+// --- SEND TEAM INVITE ---
+pub async fn invite(Extension(user): Extension<User>, 
+    State(state): State<AppState>, 
+    Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+
     let username = body.get("username").and_then(|v| v.as_str()).unwrap_or("");
     let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
 
@@ -197,7 +233,7 @@ pub async fn invite(Extension(user): Extension<User>, State(state): State<AppSta
         .bind(target_user_id).bind(team_id).fetch_one(&state.pool).await?;
     if already_in { return Err(AppError::BadRequest("Utente già nel gruppo.".into())); }
 
-    // Blocco inviti duplicati: se è già in attesa
+    // Block duplicated invites. Already sent
     let pending: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM invite WHERE id_user = ?1 AND id_team = ?2)")
         .bind(target_user_id).bind(team_id).fetch_one(&state.pool).await?;
 
@@ -215,14 +251,18 @@ pub async fn invite(Extension(user): Extension<User>, State(state): State<AppSta
     Ok(Json(json!({ "success": true, "message": "Invito inviato!" })))
 }
 
-pub async fn accept(Extension(user): Extension<User>, State(state): State<AppState>, Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+// --- ACCEPT TEAM INVITE ---
+pub async fn accept(Extension(user): Extension<User>, 
+    State(state): State<AppState>, 
+    Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+
     let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
     if team_id == 0 { return Err(AppError::BadRequest("ID Gruppo mancante.".into())); }
 
     let mut tx = state.pool.begin().await?;
     sqlx::query("INSERT INTO user_team (id_user, id_team) VALUES (?1, ?2)").bind(user.id).bind(team_id).execute(&mut *tx).await?;
 
-    // Registra l'istante di ingresso per tagliare i messaggi precedenti
+    // Track join time to hide previous messages (before the join)
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS user_team_join (id_user INTEGER NOT NULL, id_team INTEGER NOT NULL, joined_at TEXT NOT NULL, PRIMARY KEY (id_user, id_team))"
     ).execute(&mut *tx).await?;
@@ -245,16 +285,25 @@ pub async fn accept(Extension(user): Extension<User>, State(state): State<AppSta
     Ok(Json(json!({ "success": true, "message": "Invito accettato!" })))
 }
 
-pub async fn decline(Extension(user): Extension<User>, State(state): State<AppState>, Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+// --- DECLINE TEAM INVITE ---
+pub async fn decline(Extension(user): Extension<User>, 
+    State(state): State<AppState>, 
+    Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+
     let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
     if team_id == 0 { return Err(AppError::BadRequest("ID Gruppo mancante.".into())); }
 
     sqlx::query("DELETE FROM invite WHERE id_user = ?1 AND id_team = ?2").bind(user.id).bind(team_id).execute(&state.pool).await?;
+
     Ok(Json(json!({ "success": true, "message": "Invito rifiutato." })))
 }
 
-// --- MESSAGGI ---
-pub async fn get_messages(Extension(user): Extension<User>, State(state): State<AppState>, Query(params): Query<HashMap<String, String>>) -> Result<impl IntoResponse, AppError> {
+// --- GET TEAM MESSAGES ---
+pub async fn get_messages(Extension(user): Extension<User>, 
+    State(state): State<AppState>, 
+    Query(params): Query<HashMap<String, String>>
+    ) -> Result<impl IntoResponse, AppError> {
+
     let team_id = params.get("team_id").and_then(|v| v.parse::<i64>().ok()).unwrap_or(0);
     if team_id == 0 { return Err(AppError::BadRequest("ID Gruppo mancante.".into())); }
 
@@ -286,10 +335,15 @@ pub async fn get_messages(Extension(user): Extension<User>, State(state): State<
         .bind(cutoff)
         .fetch_all(&state.pool)
         .await?;
+
     Ok(Json(rows))
 }
 
-pub async fn send_message(Extension(user): Extension<User>, State(state): State<AppState>, Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+// --- SEND TEAM MESSAGE ---
+pub async fn send_message(Extension(user): Extension<User>, 
+    State(state): State<AppState>, 
+    Json(body): Json<Value>) -> Result<impl IntoResponse, AppError> {
+        
     let team_id = body.get("team_id").and_then(|v| v.as_i64()).unwrap_or(0);
     let msg = body.get("message").and_then(|v| v.as_str()).unwrap_or("");
 

@@ -182,7 +182,7 @@ pub async fn get_private_online(
 pub async fn get_unread_notifications(Extension(user): Extension<User>, 
     State(state): State<AppState>) -> Result<Json<HashMap<i64, i64>>, AppError> {
 
-    // Count unread messagges. Compare data and hour of last access of user with data and hour of messages
+    // Count unread messages. Compare data and hour of last access of user with data and hour of messages
     // Each data is greater than an empty string. Useful for handling cases of never opened chat.
     let rows: Vec<(i64, i64)> = sqlx::query_as(
         r#"
@@ -218,7 +218,7 @@ pub async fn get_unread_notifications(Extension(user): Extension<User>,
     Ok(Json(counts))
 }
 
-// --- MARK PRIVATE CHAT AS READ ---
+// --- MARK PRIVATE CHAT MESSAGES AS READ ---
 pub async fn mark_as_read(Extension(user): Extension<User>, 
     State(state): State<AppState>, 
     Path(chat_id): Path<i64>) -> Result<impl IntoResponse, AppError> {
