@@ -47,3 +47,7 @@
 [15-03-2026 11:55:53] CPU Usage: 0.96% | Runtime: 1683s | Cores: 4
 [15-03-2026 11:57:53] CPU Usage: 0.81% | Runtime: 1803s | Cores: 4
 [15-03-2026 11:59:53] CPU Usage: 1.00% | Runtime: 1923s | Cores: 4
+[15-03-2026 12:21:03] CPU Usage: 1.20% | Runtime: 121s | Cores: 4
+[15-03-2026 12:23:04] CPU Usage: 4.74% | Runtime: 242s | Cores: 4
+[15-03-2026 12:25:04] CPU Usage: 1.66% | Runtime: 362s | Cores: 4
+[15-03-2026 12:27:04] CPU Usage: 0.68% | Runtime: 482s | Cores: 4
