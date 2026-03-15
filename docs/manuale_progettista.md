@@ -269,6 +269,53 @@ Dall'analisi del file `backend/cpu_log.txt` generato durante lo sviluppo e il te
 
 - **Utilizzo CPU in condizioni idle**: con pochi utenti connessi che non interagiscono tra loro, la percentuale di utilizzo della CPU si attesta tipicamente tra 0.01% e 0.50%. Questo conferma l'efficienza del runtime asincrono *Tokio*, che non spreca cicli CPU in attesa passiva di eventi.
 - **Utilizzo medio sotto carico**: durante le sessioni di test con più utenti connessi e scambio attivo di messaggi in chat private e team, il consumo si attesta stabilmente tra **0.50% e 2.00%**.
-- **Utilizzo sotto stress**: durante i test di carico intensivi, simulando l'invio massivo di messaggi tramite script JavaScript automatizzati iniettati direttamente nella console degli strumenti per sviluppatori del browser (circa 50 al secondo), il consumo della CPU ha raggiunto picchi vicini al 4.00%.
+- **Utilizzo sotto stress**: durante i test di carico intensivi, simulando l'invio massivo di messaggi tramite script JavaScript automatizzati iniettati direttamente nella console degli strumenti per sviluppatori del browser, il consumo della CPU ha raggiunto picchi vicini al 4.50%. Un esempio di script di test utilizzato su una chat di gruppo è il seguente:
+
+```javascript
+async function stressTest(numeroMessaggi, delayMs) {
+    const teamId = 4; // l'utente loggato deve appartenere al team
+    const endpoint = 'http://localhost:3000/send';
+    
+    console.log(`%c Avvio stress test: ${numeroMessaggi} messaggi...`, 'color: orange; font-weight: bold;');
+    
+    let successi = 0;
+    let errori = 0;
+
+    for (let i = 1; i <= numeroMessaggi; i++) {
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', 
+                body: JSON.stringify({
+                    team_id: teamId,
+                    message: `Test messaggio n. ${i} - ${new Date().toLocaleTimeString()}`
+                })
+            });
+
+            if (response.ok) {
+                successi++;
+            } else {
+                errori++;
+                console.error(`Errore al messaggio ${i}: ${response.status}`);
+            }
+        } catch (e) {
+            errori++;
+            console.error(`Errore di rete al messaggio ${i}`);
+        }
+
+        // Log ogni 50 messaggi
+        if (i % 50 === 0) {
+            console.log(`Progresso: ${i}/${numeroMessaggi}...`);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+
+    console.log(`%c TEST COMPLETATO!`, 'color: green; font-weight: bold;');
+    console.table({ Successi: successi, Errori: errori, Totale: numeroMessaggi });
+}
+
+stressTest(500, 10);  // esecuzione stress test. 500 messaggi, uno ogni 10 ms
 
 Il backend risulta dunque estremamente leggero, confermando la validità della scelta di *Rust* come linguaggio per il server di Ruggine Chat.
