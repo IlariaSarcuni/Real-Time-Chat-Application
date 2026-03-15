@@ -9,7 +9,8 @@ use serde_json::json;
 
 use crate::{models::User, state::AppState};
 
-pub async fn websocket_handler(ws: WebSocketUpgrade, Extension(user): Extension<User>, State(state): State<AppState>, uri: Uri, Path(id): Path<i64>) -> impl IntoResponse {
+pub async fn websocket_handler(ws: WebSocketUpgrade, Extension(user): Extension<User>, 
+    State(state): State<AppState>, uri: Uri, Path(id): Path<i64>) -> impl IntoResponse {
 
     let path = uri.path();  
 

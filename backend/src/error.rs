@@ -23,7 +23,7 @@ impl From<anyhow::Error> for AppError {
     }
 }
 
-// Trasforma l'errore in una Risposta HTTP JSON
+// Convert the error in an HTTP JSON response
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {

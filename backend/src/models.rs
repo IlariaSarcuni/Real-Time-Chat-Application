@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, SqlitePool};
 use axum_session_auth::Authentication;
+use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
 
 #[derive(Serialize, FromRow)]
