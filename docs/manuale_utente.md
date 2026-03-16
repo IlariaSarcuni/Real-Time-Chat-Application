@@ -49,7 +49,7 @@
   - [10.1 Inviti ai gruppi](#101-inviti-ai-gruppi)
   - [10.2 Messaggi non letti](#102-messaggi-non-letti)
 - [11. Impostazioni e preferenze](#11-impostazioni-e-preferenze)
-  - [11.1 Tema chiaro / scuro](#111-tema-chiaro-scuro)
+  - [11.1 Tema chiaro / scuro](#111-tema-chiaro--scuro)
 - [12. Logout](#12-logout)
 - [13. Errori comuni e soluzioni](#13-errori-comuni-e-soluzioni)
  
