@@ -1,4 +1,3 @@
-<!-- omit in toc -->
 # Ruggine Chat 🦀 – Manuale Utente
 **Sistema di messaggistica Real-Time ad alte prestazioni**
 
@@ -8,7 +7,6 @@
 
 ---
 
-<!-- omit in toc -->
 ### Gruppo di Sviluppo (G9)
 * [Agnese Re](https://github.com/AgneseRe) – Matricola: s325676
 * [Ilaria Sarcuni](https://github.com/IlariaSarcuni) – Matricola: s332008
@@ -18,7 +16,6 @@
 
 ---
 
-<!-- omit in toc -->
 ## Indice
  
 - [1. Introduzione](#1-introduzione)
@@ -52,7 +49,7 @@
   - [10.1 Inviti ai gruppi](#101-inviti-ai-gruppi)
   - [10.2 Messaggi non letti](#102-messaggi-non-letti)
 - [11. Impostazioni e preferenze](#11-impostazioni-e-preferenze)
-  - [11.1 Tema chiaro / scuro](#111-tema-chiaro--scuro)
+  - [11.1 Tema chiaro / scuro](#111-tema-chiaro-scuro)
 - [12. Logout](#12-logout)
 - [13. Errori comuni e soluzioni](#13-errori-comuni-e-soluzioni)
  
