@@ -51,3 +51,14 @@
 [15-03-2026 12:23:04] CPU Usage: 4.74% | Runtime: 242s | Cores: 4
 [15-03-2026 12:25:04] CPU Usage: 1.66% | Runtime: 362s | Cores: 4
 [15-03-2026 12:27:04] CPU Usage: 0.68% | Runtime: 482s | Cores: 4
+[16-03-2026 09:49:44] CPU Usage: 0.43% | Runtime: 122s | Cores: 14
+[16-03-2026 09:51:44] CPU Usage: 0.14% | Runtime: 242s | Cores: 14
+[16-03-2026 09:53:44] CPU Usage: 0.08% | Runtime: 362s | Cores: 14
+[16-03-2026 09:55:44] CPU Usage: 0.21% | Runtime: 482s | Cores: 14
+[16-03-2026 09:57:44] CPU Usage: 1.39% | Runtime: 602s | Cores: 14
+[16-03-2026 09:59:44] CPU Usage: 1.24% | Runtime: 722s | Cores: 14
+[16-03-2026 10:01:44] CPU Usage: 0.72% | Runtime: 842s | Cores: 14
+[16-03-2026 10:03:44] CPU Usage: 6.82% | Runtime: 962s | Cores: 14
+[16-03-2026 10:05:44] CPU Usage: 1.97% | Runtime: 1082s | Cores: 14
+[16-03-2026 10:07:44] CPU Usage: 4.46% | Runtime: 1202s | Cores: 14
+[16-03-2026 10:09:44] CPU Usage: 1.44% | Runtime: 1322s | Cores: 14
