@@ -24,8 +24,8 @@
 - [1. Introduzione](#1-introduzione)
   - [Modello di comunicazione](#modello-di-comunicazione)
 - [2. Architettura del sistema e tecnologie](#2-architettura-del-sistema-e-tecnologie)
-  - [⚙️ Backend](#️-backend)
-  - [🎨 Frontend](#-frontend)
+  - [Backend](#️-backend)
+  - [Frontend](#-frontend)
 - [3. Backend: implementazione in Rust](#3-backend-implementazione-in-rust)
 - [4. Modello dei Dati](#4-modello-dei-dati)
   - [Tabelle Database](#tabelle-database)
@@ -101,7 +101,7 @@ graph TD
 
 L’architettura di *Ruggine Chat* si avvale di uno stack tecnologico all'avanguardia, dove la scelta di ciascun componente è stata guidata dalla necessità di coniugare elevate prestazioni computazionali a una gestione rigorosa della sicurezza dei dati. I principali componenti, le tecnologie e le relative funzionalità sono illustrati di seguito.
 
-### ⚙️ Backend
+### Backend
 
 | Componente | Tecnologia | Funzionalità |
 |---|---|---|
@@ -113,7 +113,7 @@ L’architettura di *Ruggine Chat* si avvale di uno stack tecnologico all'avangu
 | Hashing password | bcrypt 0.16.0 | Fornisce un algoritmo di cifratura sicuro per l'archiviazione delle credenziali nel database. |
 | WebSocket | Axum ws + futures-util | Implementa comunicazione bidirezionale per lo scambio di messaggi in tempo reale. |
 
-### 🎨 Frontend
+### Frontend
 
 | Componente | Tecnologia | Funzionalità |
 |---|---|---|
@@ -306,14 +306,14 @@ dove:
 Dall'analisi del file `backend/cpu_log.txt` generato durante lo sviluppo e il testing dell'applicazione emergono le seguenti osservazioni:
 
 - **Utilizzo CPU in condizioni idle**: con pochi utenti connessi che non interagiscono tra loro, la percentuale di utilizzo della CPU si attesta tipicamente tra 0.01% e 0.50%. Questo conferma l'efficienza del runtime asincrono *Tokio*, che non spreca cicli CPU in attesa passiva di eventi.
-- **Utilizzo medio sotto carico**: durante le sessioni di test con più utenti connessi e scambio attivo di messaggi in chat private e team, il consumo si attesta stabilmente tra **0.50% e 2.00%**.
+- **Utilizzo medio sotto carico**: durante le sessioni di test con più utenti connessi e scambio attivo di messaggi in chat private e team, il consumo si attesta stabilmente tra **0.50% e 3.00%**.
 - **Utilizzo sotto stress**: durante i test di carico intensivi, simulando l'invio massivo di messaggi tramite script *JavaScript* automatizzati iniettati direttamente nella console degli strumenti per sviluppatori del browser, il consumo della CPU ha raggiunto picchi vicini al 5.00%. Il backend risulta dunque estremamente leggero anche in condizioni di stress, confermando la validità della scelta di *Rust* come linguaggio per il server dell'applicazione. 
 
 Un esempio di script di test utilizzato su una chat di gruppo è il seguente:
 
 ```javascript
 async function stressTest(numeroMessaggi, delayMs) {
-    const teamId = 4; // l'utente loggato deve appartenere al team
+    const teamId = 1; // l'utente loggato deve appartenere al team
     const endpoint = 'http://localhost:3000/send';
     
     console.log(`%c Avvio stress test: ${numeroMessaggi} messaggi...`, 'color: orange; font-weight: bold;');
@@ -360,4 +360,4 @@ stressTest(500, 10);  // esecuzione stress test. 500 messaggi, uno ogni 10 ms
 ```
 Di seguito è riportato ciò che risulta in una chat di gruppo durante uno **stress test**. L'ora di ciascun messaggio inviato conferma l'alta velocità di elaborazione del server.
 
-![Stress Test](../img/stress_test.PNG)
+![Stress Test](../img/stress_test.jpg)
