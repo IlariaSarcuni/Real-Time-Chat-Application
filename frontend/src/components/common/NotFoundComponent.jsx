@@ -25,12 +25,6 @@ function NotFoundComponent() {
                 <Col as="h2" md={8} lg={6} className="mx-auto fw-bold">Opsss! Pagina non trovata.</Col>
             </Row>
             
-            <Row className={`text-center w-100 ${textColor}`}>
-                <Col as="p" md={8} lg={6} className="mx-auto lead">
-                    È possibile che tu abbia digitato l'URL in modo errato o che la pagina sia stata spostata o eliminata.
-                </Col>
-            </Row>
-            
             <Row className="text-center mt-3 w-100">
                 <Col as="p" md={8} lg={6} className="mx-auto">
                     <Link 
